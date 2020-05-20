@@ -64,12 +64,16 @@ const axes: StoreModule = {
   }
 };
 
+export function hasBoxSeries(series: SeriesState) {
+  return series.column || series.bar;
+}
+
 function getValueAxisName(series) {
   return series.bar ? AxisType.X : AxisType.Y;
 }
 
 function isPointOnColumn(series: SeriesState, options: Options) {
-  if (series.column || series.bar) {
+  if (hasBoxSeries(series)) {
     return true;
   }
 

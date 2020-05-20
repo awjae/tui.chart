@@ -72,6 +72,11 @@ type SeriesState = {
   [key in ChartType]?: SeriesData<key>; // @TODO: Series 와 통합 필요. 중복되는 느낌
 };
 
+type PlotLine = {
+  value: number | string;
+  color: string;
+  vertical: boolean;
+};
 export interface ChartState<T extends Options> {
   chart: BaseChartOptions;
   layout: {
@@ -94,6 +99,9 @@ export interface ChartState<T extends Options> {
   categories?: string[];
   stackSeries: {
     [key in BoxType]?: StackSeriesData<key>;
+  };
+  plot: {
+    lines?: PlotLine[];
   };
 }
 

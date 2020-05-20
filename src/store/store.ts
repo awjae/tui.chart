@@ -99,7 +99,8 @@ export default class Store<T extends Options> {
     },
     options: {} as T,
     categories: [],
-    stackSeries: {}
+    stackSeries: {},
+    plot: {}
   };
 
   computed: Record<string, any> = {};

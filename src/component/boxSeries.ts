@@ -64,6 +64,10 @@ function calibrateDrawingValue(value: BoxSeriesDataType, min: number, max: numbe
       value = min;
     }
 
+    if (value >= max) {
+      value = max;
+    }
+
     if (max < 0) {
       value -= max;
     }
@@ -339,11 +343,11 @@ export default class BoxSeries extends Component {
       const hasNegativeOnly = labels.every((label) => Number(label) <= 0);
 
       if (hasPositiveOnly) {
-        basePosition = Number(first(tickPositions));
+        basePosition = this.isBar ? Number(first(tickPositions)) : Number(last(tickPositions));
       }
 
       if (hasNegativeOnly) {
-        basePosition = Number(last(tickPositions));
+        basePosition = this.isBar ? Number(last(tickPositions)) : Number(first(tickPositions));
       }
     } else {
       basePosition = tickPositions[zeroValueIndex];

@@ -48,7 +48,7 @@ function isSeriesOverflowed(scaleData: ScaleData, scale: Required<Scale>) {
 function getDigits(num: number): number {
   const logNumberDividedLN10 = num === 0 ? 1 : Math.log(Math.abs(num)) / Math.LN10;
 
-  return Math.pow(10, Math.floor(logNumberDividedLN10));
+  return 10 ** Math.floor(logNumberDividedLN10);
 }
 
 function getSnappedNumber(num: number): number {
@@ -99,7 +99,7 @@ function getNormalizedLimit(limit: ValueEdge, stepSize: number, showLabel?: bool
     min = -(Math.ceil((Math.abs(min) * placeNumber) / fixedStep) * fixedStep) / placeNumber;
   } else {
     // 0 when min value is positive and smaller than step
-    min = 0;
+    // min = 0;
   }
 
   return {

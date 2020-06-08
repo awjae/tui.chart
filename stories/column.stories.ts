@@ -6,6 +6,7 @@ import {
   budgetDataForGroupStack,
   negativeBudgetData,
   budgetDataForDiverging,
+  budgetDataOnlyNegative,
 } from './data';
 import { ColumnChartOptions } from '@t/options';
 import { deepMergedCopy } from '@src/helpers/utils';
@@ -165,6 +166,68 @@ export const divergingGroupStack = () => {
         type: 'normal',
         connector: true,
       },
+    },
+  });
+
+  return el;
+};
+
+export const minMaxForPositive = () => {
+  const { el } = createChart(budgetData, {
+    ...defaultOptions,
+    yAxis: {
+      scale: {
+        min: 1000,
+        max: 8000,
+      },
+    },
+  });
+
+  return el;
+};
+
+export const minMaxForNegative = () => {
+  const { el } = createChart(budgetDataOnlyNegative, {
+    ...defaultOptions,
+    yAxis: {
+      scale: {
+        min: -8000,
+        max: -1000,
+      },
+    },
+  });
+
+  return el;
+};
+
+export const minMaxOnStack = () => {
+  const { el } = createChart(budgetDataOnlyNegative, {
+    ...defaultOptions,
+    yAxis: {
+      scale: {
+        min: -8000,
+        max: -1000,
+      },
+    },
+    series: {
+      stack: true,
+    },
+  });
+
+  return el;
+};
+
+export const minMaxForNegativeStack = () => {
+  const { el } = createChart(budgetDataOnlyNegative, {
+    ...defaultOptions,
+    yAxis: {
+      scale: {
+        min: -8000,
+        max: -1000,
+      },
+    },
+    series: {
+      stack: true,
     },
   });
 

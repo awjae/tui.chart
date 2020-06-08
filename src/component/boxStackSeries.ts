@@ -22,7 +22,7 @@ import { RectModel } from '@t/components/series';
 import { deepCopyArray, includes } from '@src/helpers/utils';
 import { LineModel } from '@t/components/axis';
 import { getLimitOnAxis } from '@src/helpers/axes';
-import { isGroupStack } from '@src/store/stackSeriesData';
+import { isGroupStack, isPercentStack } from '@src/store/stackSeriesData';
 
 type RenderOptions = {
   stack: Stack;
@@ -31,6 +31,8 @@ type RenderOptions = {
   min: number;
   max: number;
   diverging: boolean;
+  hasPositiveOnly: boolean;
+  hasNegativeOnly: boolean;
 };
 
 function sumOfPrevValues(values: number[], currentIndex: number, included = false) {
@@ -84,11 +86,14 @@ export default class BoxStackSeries extends BoxSeries {
       min,
       max,
       diverging,
+      hasPositiveOnly: labels.every((label) => Number(label) >= 0),
+      hasNegativeOnly: labels.every((label) => Number(label) <= 0),
     };
 
     this.basePosition = this.getBasePosition(labels, tickCount);
 
     const { series, connector } = this.renderStackSeriesModel(seriesData, colors, renderOptions);
+    console.log(series);
     const hoveredSeries = this.renderHighlightSeriesModel(series);
     const tooltipData: TooltipData[] = this.getTooltipData(seriesData, colors, categories);
 
@@ -133,8 +138,8 @@ export default class BoxStackSeries extends BoxSeries {
   ) {
     const seriesModels: RectModel[] = [];
     const columnWidth = this.getStackColumnWidth(renderOptions, stackGroupCount);
-    const { diverging } = renderOptions;
-    const divergingSeries = diverging && isLeftBottomSide(stackGroupIndex);
+    const { diverging, max, min, stack } = renderOptions;
+    const isLBSide = diverging && isLeftBottomSide(stackGroupIndex);
 
     stackData.forEach(({ values, total }, dataIndex) => {
       const seriesPos = this.getSeriesPosition(
@@ -146,13 +151,16 @@ export default class BoxStackSeries extends BoxSeries {
       const ratio = this.getStackValueRatio(total, renderOptions);
 
       values.forEach((value, seriesIndex) => {
-        const barLength = this.getStackBarLength(value, ratio);
+        const barLength = this.getStackBarLength2(values, seriesIndex, ratio, renderOptions);
         const startPosition = this.getStackStartPosition(
           values,
           seriesIndex,
           ratio,
-          divergingSeries
+          renderOptions,
+          isLBSide
         );
+
+        console.log(startPosition);
 
         seriesModels.push({
           type: 'rect',
@@ -225,7 +233,7 @@ export default class BoxStackSeries extends BoxSeries {
     }
 
     const columnWidth = this.getStackColumnWidth(renderOptions, stackGroupCount);
-    const divergingSeries = diverging && isLeftBottomSide(stackGroupIndex);
+    const isLBSide = diverging && isLeftBottomSide(stackGroupIndex);
     const connectorPoints: Array<Point[]> = [];
 
     stackData.forEach(({ values, total }, index) => {
@@ -239,12 +247,13 @@ export default class BoxStackSeries extends BoxSeries {
           values,
           seriesIndex,
           ratio,
-          divergingSeries
+          renderOptions,
+          isLBSide
         );
         const { x, y } = this.getAdjustedRect(seriesPos, startPosition, barLength, columnWidth);
 
-        const xPos = !divergingSeries && this.isBar ? x + barLength : x;
-        const yPos = divergingSeries && !this.isBar ? y + barLength : y;
+        const xPos = !isLBSide && this.isBar ? x + barLength : x;
+        const yPos = isLBSide && !this.isBar ? y + barLength : y;
 
         points.push({ x: xPos, y: yPos });
       });
@@ -360,15 +369,18 @@ export default class BoxStackSeries extends BoxSeries {
     return this.getValueRatio(min, max, diverging);
   }
 
+  // eslint-disable-next-line complexity
   private getStackStartPosition(
     values: number[],
     currentIndex: number,
     ratio: number,
-    divergingSeries: boolean
+    renderOptions: RenderOptions,
+    isLBSide: boolean
   ) {
+    const { min, max, stack, hasPositiveOnly, hasNegativeOnly } = renderOptions;
     const basePosition = this.basePosition;
 
-    if (divergingSeries) {
+    if (isLBSide) {
       const totalPrevValues = sumOfPrevValues(values, currentIndex, this.isBar);
 
       return this.isBar
@@ -376,18 +388,97 @@ export default class BoxStackSeries extends BoxSeries {
         : basePosition + totalPrevValues * ratio;
     }
 
-    const totalPrevValues = sumOfPrevValues(
+    if (hasNegativeOnly) {
+      let totalPrevValues = sumOfPrevValues(values, currentIndex, this.isBar);
+      console.log(
+        currentIndex,
+        basePosition - Math.abs(totalPrevValues) * ratio + this.axisThickness,
+        ratio,
+        basePosition,
+        totalPrevValues,
+        totalPrevValues * ratio
+      );
+
+      const totalOfPrevValues = sumOfPrevValues(values, currentIndex, false);
+      if (min > totalOfPrevValues) {
+        return;
+      }
+
+      if (totalPrevValues < min) {
+        totalPrevValues = min;
+      }
+
+      if (max < 0) {
+        totalPrevValues = totalPrevValues - max;
+      }
+
+      return this.isBar
+        ? basePosition - Math.abs(totalPrevValues) * ratio + this.axisThickness
+        : basePosition + totalPrevValues * ratio;
+    }
+
+    let totalPrevValues = sumOfPrevValues(
       values,
       currentIndex,
       this.isBar ? values[currentIndex] < 0 : values[currentIndex] > 0
     );
+
+    if (currentIndex && hasPositiveOnly && !isPercentStack(stack)) {
+      totalPrevValues -= min;
+    }
 
     return this.isBar
       ? totalPrevValues * ratio + basePosition + this.axisThickness
       : basePosition - totalPrevValues * ratio;
   }
 
-  private getStackBarLength(value: number, ratio: number) {
+  // eslint-disable-next-line complexity
+  private getStackBarLength2(
+    values: number[],
+    seriesIndex: number,
+    ratio: number,
+    renderOptions: RenderOptions
+  ) {
+    const { min, max, stack, hasPositiveOnly, hasNegativeOnly } = renderOptions;
+    let value = values[seriesIndex];
+
+    if (isPercentStack(stack)) {
+      return value < 0 ? Math.abs(value) * ratio : value * ratio;
+    }
+
+    if (seriesIndex === 0) {
+      if (hasPositiveOnly && min > 0) {
+        value = value - min;
+      }
+
+      if (hasNegativeOnly && max < 0) {
+        value = value - max;
+      }
+    }
+
+    const totalOfPrevValues = sumOfPrevValues(values, seriesIndex, false);
+    const totalValues = sumOfPrevValues(values, seriesIndex, true);
+
+    if (hasPositiveOnly) {
+      if (totalOfPrevValues > max) {
+        return 0;
+      }
+
+      if (totalValues > max) {
+        value = max - totalOfPrevValues;
+      }
+    }
+
+    if (hasNegativeOnly) {
+      if (totalOfPrevValues < min) {
+        return 0;
+      }
+
+      if (totalValues < min) {
+        value = min - totalOfPrevValues;
+      }
+    }
+
     return value < 0 ? Math.abs(value) * ratio : value * ratio;
   }
 

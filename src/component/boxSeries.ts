@@ -1,12 +1,13 @@
 import Component from './component';
 import { RectModel, ClipRectAreaModel } from '@t/components/series';
-import { ChartState, ChartType, BoxType, AxisData } from '@t/store/store';
+import { ChartState, ChartType, BoxType } from '@t/store/store';
 import {
   BoxSeriesType,
   BoxSeriesDataType,
   BarChartOptions,
   ColumnChartOptions,
   Rect,
+  RangeDataType,
 } from '@t/options';
 import { first, includes, hasNegative, deepCopyArray, last } from '@src/helpers/utils';
 import { TooltipData } from '@t/components/tooltip';
@@ -46,7 +47,15 @@ export function isLeftBottomSide(seriesIndex: number) {
 
 function calibrateDrawingValue(value: BoxSeriesDataType, min: number, max: number): number {
   if (isRangeValue(value)) {
-    const [start, end] = value;
+    let [start, end] = value;
+
+    if (start < min) {
+      start = min;
+    }
+
+    if (end > max) {
+      end = max;
+    }
 
     return end - start;
   }
@@ -57,7 +66,7 @@ function calibrateDrawingValue(value: BoxSeriesDataType, min: number, max: numbe
     }
 
     if (min > 0) {
-      value -= min;
+      value = Math.max(value - min, 0);
     }
   } else {
     if (value < min) {
@@ -248,7 +257,7 @@ export default class BoxSeries extends Component {
     tickDistance: number,
     renderOptions: RenderOptions
   ): RectModel[] {
-    const { diverging, min, max, ratio } = renderOptions;
+    const { diverging } = renderOptions;
     const validDiverging = diverging && seriesData.length === 2;
     const columnWidth = this.getColumnWidth(tickDistance, seriesData.length, validDiverging);
 
@@ -260,7 +269,7 @@ export default class BoxSeries extends Component {
 
       return data.map((value, index) => {
         const dataStart = seriesPos + index * tickDistance + this.hoverThickness;
-        const barLength = this.getBarLength(value, min, max, ratio);
+        const barLength = this.getBarLength(value, renderOptions);
         const startPosition = this.getStartPosition(
           barLength,
           value,
@@ -366,8 +375,23 @@ export default class BoxSeries extends Component {
     return this.getOffsetSize() / ((max - min) * multiple);
   }
 
-  getBarLength(value: BoxSeriesDataType, min: number, max: number, ratio: number) {
-    return calibrateDrawingValue(value, min, max) * ratio;
+  getStartPositionWithRangeValue(
+    value: RangeDataType,
+    barLength: number,
+    renderOptions: RenderOptions
+  ) {
+    const { min, ratio } = renderOptions;
+    let [start] = value;
+
+    if (start < min) {
+      start = min;
+    }
+    const startPosition = (start - min) * ratio;
+
+    return (
+      (this.isBar ? startPosition : this.getOffsetSize() - startPosition - barLength) +
+      this.hoverThickness
+    );
   }
 
   getStartPosition(
@@ -378,15 +402,10 @@ export default class BoxSeries extends Component {
     renderOptions: RenderOptions
   ) {
     const basePosition = this.basePosition;
-    const { min, ratio, diverging } = renderOptions;
+    const { diverging } = renderOptions;
 
     if (isRangeValue(value)) {
-      const [start] = value;
-      const startPosition = (start - min) * ratio;
-
-      return this.isBar
-        ? startPosition
-        : this.getOffsetSize() - startPosition - barLength + this.hoverThickness;
+      return this.getStartPositionWithRangeValue(value, barLength, renderOptions);
     }
 
     const divergingSeries = diverging && isLeftBottomSide(seriesIndex);
@@ -417,6 +436,17 @@ export default class BoxSeries extends Component {
       width: this.isBar ? barLength : columnWidth,
       height: this.isBar ? columnWidth : barLength,
     };
+  }
+
+  private getBarLength(value: BoxSeriesDataType, renderOptions: RenderOptions) {
+    const { min, max, ratio } = renderOptions;
+    const drawingValue = calibrateDrawingValue(value, min, max);
+
+    return this.barLength(drawingValue, ratio);
+  }
+
+  protected barLength(value: number, ratio: number) {
+    return value < 0 ? Math.abs(value) * ratio : value * ratio;
   }
 
   getColumnWidth(tickDistance: number, seriesLength: number, validDiverging = false) {

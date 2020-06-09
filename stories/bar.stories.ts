@@ -6,7 +6,6 @@ import {
   budgetDataForGroupStack,
   negativeBudgetData,
   budgetDataForDiverging,
-  budgetDataOnlyNegative,
 } from './data';
 import { BarChartOptions } from '@t/options';
 import { deepMergedCopy } from '@src/helpers/utils';
@@ -93,22 +92,6 @@ export const negativeStack = () => {
   return el;
 };
 
-export const minMaxStack = () => {
-  const { el } = createChart(negativeBudgetData, {
-    series: {
-      stack: true,
-    },
-    xAxis: {
-      scale: {
-        min: -10000,
-        max: 12000,
-      },
-    },
-  });
-
-  return el;
-};
-
 export const negativePercentStack = () => {
   const { el } = createChart(negativeBudgetData, {
     series: {
@@ -179,68 +162,6 @@ export const divergingGroupStack = () => {
         type: 'normal',
         connector: true,
       },
-    },
-  });
-
-  return el;
-};
-
-export const minMaxForPositive = () => {
-  const { el } = createChart(budgetData, {
-    ...defaultOptions,
-    xAxis: {
-      scale: {
-        min: 1000,
-        max: 8000,
-      },
-    },
-  });
-
-  return el;
-};
-
-export const minMaxForNegative = () => {
-  const { el } = createChart(budgetDataOnlyNegative, {
-    ...defaultOptions,
-    xAxis: {
-      scale: {
-        min: -8000,
-        max: -1000,
-      },
-    },
-  });
-
-  return el;
-};
-
-export const minMaxOnStack = () => {
-  const { el } = createChart(budgetData, {
-    ...defaultOptions,
-    xAxis: {
-      scale: {
-        min: 1000,
-        max: 8000,
-      },
-    },
-    series: {
-      stack: true,
-    },
-  });
-
-  return el;
-};
-
-export const minMaxForNegativeStack = () => {
-  const { el } = createChart(budgetDataOnlyNegative, {
-    ...defaultOptions,
-    xAxis: {
-      scale: {
-        min: -8000,
-        max: -1000,
-      },
-    },
-    series: {
-      stack: true,
     },
   });
 

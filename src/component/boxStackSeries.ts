@@ -35,6 +35,70 @@ type RenderOptions = {
   hasNegativeOnly: boolean;
 };
 
+function exceedEdge(renderOptions: RenderOptions, totalOfPrev: number) {
+  const { min, max, hasPositiveOnly, hasNegativeOnly } = renderOptions;
+
+  return (hasPositiveOnly && totalOfPrev > max) || (hasNegativeOnly && totalOfPrev < min);
+}
+
+function calibrateFirstValue(value: number, renderOptions: RenderOptions) {
+  const { min, max, hasPositiveOnly, hasNegativeOnly } = renderOptions;
+  let result = value;
+
+  if (hasPositiveOnly && min > 0) {
+    result = value - min;
+  }
+
+  if (hasNegativeOnly && max < 0) {
+    result = value - max;
+  }
+
+  return result;
+}
+
+function calibrateDrawingValue(
+  values: number[],
+  seriesIndex: number,
+  renderOptions: RenderOptions
+) {
+  const { stack, min, max } = renderOptions;
+
+  if (isPercentStack(stack)) {
+    return values[seriesIndex];
+  }
+
+  const totalOfPrevValues = sumOfPrevValues(values, seriesIndex, false);
+  const totalOfValues = sumOfPrevValues(values, seriesIndex, true);
+
+  if (exceedEdge(renderOptions, totalOfPrevValues)) {
+    return 0;
+  }
+
+  if (seriesIndex === 0) {
+    return calibrateFirstValue(values[seriesIndex], renderOptions);
+  }
+
+  let result = values[seriesIndex];
+
+  if (totalOfValues > max) {
+    result = max - totalOfPrevValues;
+  }
+
+  if (totalOfValues < min) {
+    result = min - totalOfPrevValues;
+  }
+
+  if (totalOfPrevValues < min) {
+    result = totalOfValues - min;
+  }
+
+  if (totalOfPrevValues > max) {
+    result = totalOfValues - max;
+  }
+
+  return result;
+}
+
 function sumOfPrevValues(values: number[], currentIndex: number, included = false) {
   const curValue = values[currentIndex];
 
@@ -93,7 +157,6 @@ export default class BoxStackSeries extends BoxSeries {
     this.basePosition = this.getBasePosition(labels, tickCount);
 
     const { series, connector } = this.renderStackSeriesModel(seriesData, colors, renderOptions);
-    console.log(series);
     const hoveredSeries = this.renderHighlightSeriesModel(series);
     const tooltipData: TooltipData[] = this.getTooltipData(seriesData, colors, categories);
 
@@ -138,7 +201,7 @@ export default class BoxStackSeries extends BoxSeries {
   ) {
     const seriesModels: RectModel[] = [];
     const columnWidth = this.getStackColumnWidth(renderOptions, stackGroupCount);
-    const { diverging, max, min, stack } = renderOptions;
+    const { diverging } = renderOptions;
     const isLBSide = diverging && isLeftBottomSide(stackGroupIndex);
 
     stackData.forEach(({ values, total }, dataIndex) => {
@@ -148,10 +211,11 @@ export default class BoxStackSeries extends BoxSeries {
         dataIndex,
         stackGroupIndex
       );
+
       const ratio = this.getStackValueRatio(total, renderOptions);
 
       values.forEach((value, seriesIndex) => {
-        const barLength = this.getStackBarLength2(values, seriesIndex, ratio, renderOptions);
+        const barLength = this.getStackBarLength(values, seriesIndex, ratio, renderOptions);
         const startPosition = this.getStackStartPosition(
           values,
           seriesIndex,
@@ -160,12 +224,10 @@ export default class BoxStackSeries extends BoxSeries {
           isLBSide
         );
 
-        console.log(startPosition);
-
         seriesModels.push({
           type: 'rect',
           color: colors![seriesIndex],
-          ...this.getAdjustedRect(seriesPos, startPosition, barLength, columnWidth),
+          ...this.getAdjustedRect(seriesPos, startPosition!, barLength, columnWidth),
         });
       });
     });
@@ -250,7 +312,7 @@ export default class BoxStackSeries extends BoxSeries {
           renderOptions,
           isLBSide
         );
-        const { x, y } = this.getAdjustedRect(seriesPos, startPosition, barLength, columnWidth);
+        const { x, y } = this.getAdjustedRect(seriesPos, startPosition!, barLength, columnWidth);
 
         const xPos = !isLBSide && this.isBar ? x + barLength : x;
         const yPos = isLBSide && !this.isBar ? y + barLength : y;
@@ -354,19 +416,11 @@ export default class BoxStackSeries extends BoxSeries {
   }
 
   private getStackValueRatio(total: StackTotal, renderOptions: RenderOptions) {
-    const {
-      stack: { type: stackType },
-      scaleType,
-      min,
-      max,
-      diverging,
-    } = renderOptions;
+    const { stack, scaleType, min, max, diverging } = renderOptions;
 
-    if (stackType === 'percent') {
-      return this.getOffsetSize() / getDivisorForPercent(total, scaleType);
-    }
-
-    return this.getValueRatio(min, max, diverging);
+    return isPercentStack(stack)
+      ? this.getPercentRatio(total, scaleType)
+      : this.getValueRatio(min, max, diverging);
   }
 
   // eslint-disable-next-line complexity
@@ -380,51 +434,30 @@ export default class BoxStackSeries extends BoxSeries {
     const { min, max, stack, hasPositiveOnly, hasNegativeOnly } = renderOptions;
     const basePosition = this.basePosition;
 
-    if (isLBSide) {
-      const totalPrevValues = sumOfPrevValues(values, currentIndex, this.isBar);
-
-      return this.isBar
-        ? basePosition - totalPrevValues * ratio + this.axisThickness
-        : basePosition + totalPrevValues * ratio;
+    if (isPercentStack(stack)) {
+      return this.getStartPositionOnPercent(values, currentIndex, renderOptions, ratio);
     }
 
     if (hasNegativeOnly) {
-      let totalPrevValues = sumOfPrevValues(values, currentIndex, this.isBar);
-      console.log(
-        currentIndex,
-        basePosition - Math.abs(totalPrevValues) * ratio + this.axisThickness,
-        ratio,
-        basePosition,
-        totalPrevValues,
-        totalPrevValues * ratio
-      );
-
-      const totalOfPrevValues = sumOfPrevValues(values, currentIndex, false);
-      if (min > totalOfPrevValues) {
-        return;
-      }
-
-      if (totalPrevValues < min) {
-        totalPrevValues = min;
-      }
-
-      if (max < 0) {
-        totalPrevValues = totalPrevValues - max;
-      }
-
-      return this.isBar
-        ? basePosition - Math.abs(totalPrevValues) * ratio + this.axisThickness
-        : basePosition + totalPrevValues * ratio;
+      return this.getStartPositionWhenNegativeOnly(values, currentIndex, renderOptions, ratio);
     }
 
-    let totalPrevValues = sumOfPrevValues(
+    if (hasPositiveOnly) {
+      return this.getStartPositionWhenPositiveOnly(values, currentIndex, renderOptions, ratio);
+    }
+
+    if (isLBSide) {
+      return this.getStartPositionWhenLeftBottomSide(values, currentIndex, ratio);
+    }
+
+    const totalPrevValues = sumOfPrevValues(
       values,
       currentIndex,
       this.isBar ? values[currentIndex] < 0 : values[currentIndex] > 0
     );
 
-    if (currentIndex && hasPositiveOnly && !isPercentStack(stack)) {
-      totalPrevValues -= min;
+    if (totalPrevValues > max) {
+      return this.hoverThickness;
     }
 
     return this.isBar
@@ -432,54 +465,15 @@ export default class BoxStackSeries extends BoxSeries {
       : basePosition - totalPrevValues * ratio;
   }
 
-  // eslint-disable-next-line complexity
-  private getStackBarLength2(
+  private getStackBarLength(
     values: number[],
     seriesIndex: number,
     ratio: number,
     renderOptions: RenderOptions
   ) {
-    const { min, max, stack, hasPositiveOnly, hasNegativeOnly } = renderOptions;
-    let value = values[seriesIndex];
+    const drawingValue = calibrateDrawingValue(values, seriesIndex, renderOptions);
 
-    if (isPercentStack(stack)) {
-      return value < 0 ? Math.abs(value) * ratio : value * ratio;
-    }
-
-    if (seriesIndex === 0) {
-      if (hasPositiveOnly && min > 0) {
-        value = value - min;
-      }
-
-      if (hasNegativeOnly && max < 0) {
-        value = value - max;
-      }
-    }
-
-    const totalOfPrevValues = sumOfPrevValues(values, seriesIndex, false);
-    const totalValues = sumOfPrevValues(values, seriesIndex, true);
-
-    if (hasPositiveOnly) {
-      if (totalOfPrevValues > max) {
-        return 0;
-      }
-
-      if (totalValues > max) {
-        value = max - totalOfPrevValues;
-      }
-    }
-
-    if (hasNegativeOnly) {
-      if (totalOfPrevValues < min) {
-        return 0;
-      }
-
-      if (totalValues < min) {
-        value = min - totalOfPrevValues;
-      }
-    }
-
-    return value < 0 ? Math.abs(value) * ratio : value * ratio;
+    return this.barLength(drawingValue, ratio);
   }
 
   private getStackColumnWidth(renderOptions: RenderOptions, stackGroupCount: number) {
@@ -499,5 +493,179 @@ export default class BoxStackSeries extends BoxSeries {
     const groupIndex = diverging ? 0 : stackGroupIndex;
 
     return dataIndex * tickDistance + this.padding + columnWidth * groupIndex + this.hoverThickness;
+  }
+
+  private getStartPositionWhenLeftBottomSide(
+    values: number[],
+    currentIndex: number,
+    ratio: number
+  ) {
+    const basePosition = this.basePosition;
+    const totalPrevValues = sumOfPrevValues(values, currentIndex, this.isBar);
+
+    return this.isBar
+      ? basePosition - totalPrevValues * ratio + this.axisThickness
+      : basePosition + totalPrevValues * ratio;
+  }
+
+  private getStartPositionWhenNegativeOnly(
+    values: number[],
+    currentIndex: number,
+    renderOptions: RenderOptions,
+    ratio: number
+  ) {
+    if (!this.isBar) {
+      return this.getStartPositionWhenNegativeOnlyOnColumn(
+        values,
+        currentIndex,
+        renderOptions,
+        ratio
+      );
+    }
+
+    const basePosition = this.basePosition;
+    const { min, max } = renderOptions;
+    let totalOfValues = sumOfPrevValues(values, currentIndex, true);
+
+    const totalOfPrevValues = sumOfPrevValues(values, currentIndex, false);
+    if (min > totalOfPrevValues) {
+      return;
+    }
+
+    if (totalOfValues < min) {
+      totalOfValues = min;
+    }
+
+    if (max < 0) {
+      totalOfValues = totalOfValues - max;
+    }
+
+    return basePosition - Math.abs(totalOfValues) * ratio + this.axisThickness;
+  }
+
+  private getStartPositionWhenNegativeOnlyOnColumn(
+    values: number[],
+    currentIndex: number,
+    renderOptions: RenderOptions,
+    ratio: number
+  ) {
+    const basePosition = this.basePosition;
+    const { min, max } = renderOptions;
+    const totalOfValues = sumOfPrevValues(values, currentIndex, true);
+    const totalOfPrevValues = sumOfPrevValues(values, currentIndex, false);
+    const exceed =
+      (currentIndex === 0 && totalOfValues > max) || (currentIndex > 0 && totalOfPrevValues < min);
+
+    if (exceed) {
+      return;
+    }
+
+    let result = totalOfPrevValues;
+
+    if (min < 0 && currentIndex > 0) {
+      result = totalOfPrevValues - max;
+    }
+
+    if (max < totalOfPrevValues) {
+      return this.hoverThickness;
+    }
+
+    return basePosition + Math.abs(result) * ratio;
+  }
+
+  private getStartPositionWhenPositiveOnly(
+    values: number[],
+    currentIndex: number,
+    renderOptions: RenderOptions,
+    ratio: number
+  ) {
+    if (!this.isBar) {
+      return this.getStartPositionWhenPositiveOnlyOnColumn(
+        values,
+        currentIndex,
+        renderOptions,
+        ratio
+      );
+    }
+
+    const basePosition = this.basePosition;
+    const { min, max } = renderOptions;
+    const totalOfValues = sumOfPrevValues(values, currentIndex, true);
+    const totalOfPrevValues = sumOfPrevValues(values, currentIndex, false);
+    const exceed = min > totalOfValues || max < totalOfPrevValues;
+
+    if (exceed) {
+      return;
+    }
+
+    let result = totalOfPrevValues;
+
+    if (min > 0 && currentIndex > 0) {
+      if (totalOfPrevValues < min) {
+        result = 0;
+      } else {
+        result = totalOfPrevValues - min;
+      }
+    }
+
+    return result * ratio + basePosition + this.axisThickness;
+  }
+
+  private getStartPositionWhenPositiveOnlyOnColumn(
+    values: number[],
+    currentIndex: number,
+    renderOptions: RenderOptions,
+    ratio: number
+  ) {
+    const basePosition = this.basePosition;
+    const { min, max } = renderOptions;
+    const totalOfValues = sumOfPrevValues(values, currentIndex, true);
+    const totalOfPrevValues = sumOfPrevValues(values, currentIndex, false);
+    const exceed = min > totalOfValues || max < totalOfPrevValues;
+
+    if (exceed) {
+      return;
+    }
+
+    let result = totalOfValues;
+
+    if (min > 0) {
+      result -= min;
+    }
+
+    if (max < totalOfValues) {
+      return this.hoverThickness;
+    }
+
+    return basePosition - result * ratio;
+  }
+
+  private getStartPositionOnPercent(
+    values: number[],
+    currentIndex: number,
+    renderOptions: RenderOptions,
+    ratio: number
+  ) {
+    const basePosition = this.basePosition;
+    const { min } = renderOptions;
+    const totalPrevValues = sumOfPrevValues(
+      values,
+      currentIndex,
+      this.isBar ? values[currentIndex] < 0 : values[currentIndex] > 0
+    );
+
+    const value = values[currentIndex];
+
+    if (currentIndex === 0 && min > value) {
+      return;
+    }
+
+    return this.isBar
+      ? totalPrevValues * ratio + basePosition + this.axisThickness
+      : basePosition - totalPrevValues * ratio;
+  }
+
+  private getPercentRatio(total: StackTotal, scaleType: PercentScaleType) {
+    return this.getOffsetSize() / getDivisorForPercent(total, scaleType);
   }
 }

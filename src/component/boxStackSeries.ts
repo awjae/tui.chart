@@ -431,8 +431,28 @@ export default class BoxStackSeries extends BoxSeries {
     renderOptions: RenderOptions,
     isLBSide: boolean
   ) {
-    const { min, max, stack, hasPositiveOnly, hasNegativeOnly } = renderOptions;
+    const { min, max, stack, diverging, hasPositiveOnly, hasNegativeOnly } = renderOptions;
     const basePosition = this.basePosition;
+
+    if (diverging) {
+      if (isLBSide) {
+        return this.getStartPositionWhenLeftBottomSide(values, currentIndex, ratio);
+      }
+
+      const totalPrevValues = sumOfPrevValues(
+        values,
+        currentIndex,
+        this.isBar ? values[currentIndex] < 0 : values[currentIndex] > 0
+      );
+
+      if (totalPrevValues > max) {
+        return this.hoverThickness;
+      }
+
+      return this.isBar
+        ? totalPrevValues * ratio + basePosition + this.axisThickness
+        : basePosition - totalPrevValues * ratio;
+    }
 
     if (isPercentStack(stack)) {
       return this.getStartPositionOnPercent(values, currentIndex, renderOptions, ratio);
@@ -446,10 +466,45 @@ export default class BoxStackSeries extends BoxSeries {
       return this.getStartPositionWhenPositiveOnly(values, currentIndex, renderOptions, ratio);
     }
 
-    if (isLBSide) {
-      return this.getStartPositionWhenLeftBottomSide(values, currentIndex, ratio);
+    const totalOfPrevValues = sumOfPrevValues(values, currentIndex, false);
+    const totalOfValues = sumOfPrevValues(values, currentIndex, true);
+    const value = values[currentIndex];
+    const isLB = value < 0;
+
+    let result = 0; // totalOfPrevValues;
+
+    if (isLB) {
+      if (totalOfPrevValues < min) {
+        return;
+      }
+
+      if (totalOfValues < min) {
+        return this.isBar
+          ? this.hoverThickness + this.axisThickness
+          : basePosition - totalOfPrevValues * ratio;
+      }
+
+      result = this.isBar ? values[currentIndex] : 0;
+
+      return this.isBar ? result * ratio + basePosition : basePosition - result * ratio;
     }
 
+    result = this.isBar ? 0 : totalOfValues;
+    // LB가 아닐 때
+    if (totalOfPrevValues > max) {
+      return;
+    }
+
+    if (totalOfValues > max) {
+      return this.isBar
+        ? totalOfPrevValues * ratio + basePosition + this.axisThickness
+        : this.hoverThickness + this.axisThickness;
+    }
+
+    return this.isBar
+      ? result * ratio + basePosition + this.axisThickness
+      : basePosition - result * ratio;
+    /*
     const totalPrevValues = sumOfPrevValues(
       values,
       currentIndex,
@@ -463,6 +518,7 @@ export default class BoxStackSeries extends BoxSeries {
     return this.isBar
       ? totalPrevValues * ratio + basePosition + this.axisThickness
       : basePosition - totalPrevValues * ratio;
+    */
   }
 
   private getStackBarLength(

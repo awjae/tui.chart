@@ -20,8 +20,8 @@ import {
 } from '@t/store/store';
 import { TooltipData } from '@t/components/tooltip';
 import { RectModel } from '@t/components/series';
-import { deepCopyArray, includes, isNumber } from '@src/helpers/utils';
-import { LineModel } from '@t/components/axis';
+import { deepCopyArray, includes, isNumber, pickProperty } from '@src/helpers/utils';
+import { LineModel, LabelModel } from '@t/components/axis';
 import { getLimitOnAxis } from '@src/helpers/axes';
 import { isGroupStack, isPercentStack } from '@src/store/stackSeriesData';
 import { AxisType } from './axis';
@@ -29,6 +29,8 @@ import {
   calibrateBoxStackDrawingValue,
   sumValuesBeforeIndex,
 } from '@src/helpers/boxSeriesCalculator';
+import { BoxStackSeriesLabel } from './boxSeriesLabel';
+import { label } from '@src/brushes/basic';
 
 type RenderOptions = {
   stack: Stack;
@@ -37,7 +39,19 @@ type RenderOptions = {
   min: number;
   max: number;
   diverging: boolean;
+  ratio?: number;
   seriesDirection: SeriesDirection;
+  labelOptions: {
+    visible: boolean;
+    inside: boolean;
+    font: string;
+    color: string;
+    total?: {
+      visible: boolean;
+      color?: string;
+      font?: string;
+    };
+  };
 };
 
 function calibrateDrawingValue(
@@ -72,6 +86,16 @@ export default class BoxStackSeries extends BoxSeries {
     const { labels } = axes[this.valueAxis];
     const { tickDistance } = axes[this.labelAxis];
     const diverging = !!options.series?.diverging;
+    // const showLabel = !!options.series?.showLabel;
+    const labelOptions = Object.assign(
+      {
+        visible: false,
+        font: 'normal 11px Arial',
+        color: '#333',
+        inside: false,
+      },
+      pickProperty(options, ['series', 'label'])
+    );
     const { min, max } = getLimitOnAxis(labels, diverging);
 
     return {
@@ -82,6 +106,7 @@ export default class BoxStackSeries extends BoxSeries {
       max,
       diverging,
       seriesDirection: this.getSeriesDirection(labels),
+      labelOptions,
     };
   }
 
@@ -104,11 +129,14 @@ export default class BoxStackSeries extends BoxSeries {
     const { series, connector } = this.renderStackSeriesModel(seriesData, colors, renderOptions);
     const hoveredSeries = this.renderHighlightSeriesModel(series);
     const tooltipData: TooltipData[] = this.getTooltipData(seriesData, colors, categories);
+    const labels = this.renderStackLabelModel(series, seriesData, renderOptions);
+    const totalLabels = this.renderStackLabelModel_new(seriesData, renderOptions);
 
     this.models = {
       clipRect: [this.renderClipRectAreaModel()],
       series,
       connector,
+      label: [...labels, ...totalLabels],
     };
 
     if (!this.drawModels) {
@@ -116,6 +144,7 @@ export default class BoxStackSeries extends BoxSeries {
         clipRect: this.models.clipRect,
         series: deepCopyArray(series),
         connector: deepCopyArray(connector),
+        label: deepCopyArray(this.models.label),
       };
     }
 
@@ -123,6 +152,110 @@ export default class BoxStackSeries extends BoxSeries {
       ...m,
       data: tooltipData[index],
     }));
+  }
+
+  renderStackLabelModel(
+    series: RectModel[],
+    seriesData: StackSeriesData<BoxType>,
+    renderOptions: RenderOptions
+  ): LabelModel[] {
+    const { visible, font, color } = renderOptions.labelOptions;
+
+    if (!visible) {
+      return [];
+    }
+
+    const labelOptions = {
+      font,
+      color,
+      direction: this.isBar ? 'horizontal' : 'vertical',
+    };
+
+    return series.map((data) => new BoxStackSeriesLabel(data, labelOptions).model);
+  }
+
+  private makeStackLabelModel(stackData: StackDataValues, renderOptions: RenderOptions) {
+    const { seriesDirection, labelOptions } = renderOptions;
+    const { font } = labelOptions;
+    const labelModels: LabelModel[] = [];
+
+    const stackGroupCount = 1;
+    const stackGroupIndex = 0;
+
+    const columnWidth = this.getStackColumnWidth(renderOptions, stackGroupCount);
+    const basePosition = this.basePosition;
+
+    stackData.forEach(({ values, total }, dataIndex) => {
+      const { positive, negative } = total;
+      const ratio = this.getStackValueRatio(total, renderOptions);
+      renderOptions.ratio = ratio;
+      const seriesPos = this.getSeriesPosition(
+        renderOptions,
+        columnWidth,
+        dataIndex,
+        stackGroupIndex
+      );
+
+      if (seriesDirection === SeriesDirection.POSITIVE) {
+        const barLength = this.getBarLength(positive, ratio);
+        const startPosition = this.isBar
+          ? basePosition + this.axisThickness
+          : basePosition - barLength;
+
+        const rect = this.getAdjustedRect(seriesPos, startPosition, barLength, columnWidth);
+        const { width, height } = rect;
+        let { x, y } = rect;
+        let style = { font };
+        let textAlign = 'center';
+        let textBaseline = 'middle';
+
+        if (this.isBar) {
+          textAlign = 'left';
+          x = rect.x + width;
+          y = rect.y + height / 2;
+        } else {
+          textBaseline = 'bottom';
+          x = rect.x + width / 2;
+        }
+
+        style = Object.assign(style, {
+          textAlign,
+          textBaseline,
+        });
+
+        labelModels.push({
+          type: 'label',
+          text: positive.toString(),
+          x,
+          y,
+          style: ['default', style],
+        });
+        console.log('양수!', positive, barLength, seriesPos);
+      } else if (seriesDirection === SeriesDirection.NEGATIVE) {
+        console.log('음수!', negative);
+      } else {
+        console.log('양수! 음수! 둘다!', positive, negative);
+      }
+    });
+
+    return labelModels;
+  }
+
+  private makeStackGroupLabelModel(
+    stackSeries: StackSeriesData<BoxType>,
+    renderOptions: RenderOptions
+  ) {}
+
+  renderStackLabelModel_new(seriesData: StackSeriesData<BoxType>, renderOptions: RenderOptions) {
+    if (!renderOptions.labelOptions.total) {
+      return [];
+    }
+
+    const { stackData } = seriesData;
+
+    return isGroupStack(stackData)
+      ? this.makeStackGroupLabelModel(seriesData, renderOptions)
+      : this.makeStackLabelModel(stackData, renderOptions);
   }
 
   renderStackSeriesModel(
@@ -170,6 +303,7 @@ export default class BoxStackSeries extends BoxSeries {
         seriesModels.push({
           type: 'rect',
           color: colors![seriesIndex],
+          label: this.getLabelValue(value),
           ...this.getAdjustedRect(seriesPos, dataPosition, barLength!, columnWidth),
         });
       });

@@ -63,4 +63,5 @@ export type RectModel = {
   color: string;
   style?: StyleProp<RectStyle, RectStyleName>;
   thickness?: number;
+  label?: string;
 } & Rect;

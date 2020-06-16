@@ -21,9 +21,7 @@ const defaultOptions: ColumnChartOptions = {
     width,
     height,
   },
-  series: {
-    showLabel: true,
-  },
+  series: {},
 };
 
 function createChart(data, customOptions?: ColumnChartOptions) {
@@ -164,6 +162,35 @@ export const divergingGroupStack = () => {
       stack: {
         type: 'normal',
         connector: true,
+      },
+    },
+  });
+
+  return el;
+};
+
+export const showLabel = () => {
+  const { el } = createChart(budgetData, {
+    series: {
+      label: {
+        visible: true,
+      },
+    },
+  });
+
+  return el;
+};
+
+export const showLabelStack = () => {
+  const { el } = createChart(budgetDataForStack, {
+    series: {
+      stack: true,
+      showLabel: true, // TODO: 삭제
+      label: {
+        visible: true,
+        total: {
+          visible: true,
+        },
       },
     },
   });

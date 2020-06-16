@@ -167,3 +167,29 @@ export const divergingGroupStack = () => {
 
   return el;
 };
+
+export const showLabel = () => {
+  const { el } = createChart(budgetData, {
+    series: {
+      label: {
+        visible: true,
+      },
+    },
+  });
+
+  return el;
+};
+
+export const showLabelStack = () => {
+  const { el } = createChart(budgetDataForStack, {
+    series: {
+      stack: true,
+      label: {
+        visible: true,
+        total: false,
+      },
+    },
+  });
+
+  return el;
+};

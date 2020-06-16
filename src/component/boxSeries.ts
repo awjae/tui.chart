@@ -20,8 +20,8 @@ import {
   isNull,
 } from '@src/helpers/utils';
 import { TooltipData } from '@t/components/tooltip';
-import { LineModel } from '@t/components/axis';
-import { makeTickPixelPositions } from '@src/helpers/calculator';
+import { LineModel, LabelModel } from '@t/components/axis';
+import { makeTickPixelPositions, getTextWidth, getTextHeight } from '@src/helpers/calculator';
 import { getRGBA, getAlpha } from '@src/helpers/color';
 import { isRangeData, isRangeValue } from '@src/helpers/range';
 import { getLimitOnAxis } from '@src/helpers/axes';
@@ -41,6 +41,7 @@ type DrawModels = {
   series: RectModel[];
   hoveredSeries?: RectModel[];
   connector?: LineModel[];
+  label?: any; // LabelModel[];
 };
 
 type RenderOptions = {
@@ -50,6 +51,14 @@ type RenderOptions = {
   diverging: boolean;
   ratio: number;
   hasNegativeValue: boolean;
+  labelOptions: {
+    visible: boolean;
+    inside?: boolean;
+    font?: string;
+    color?: string;
+    align?: string;
+  };
+  font?: string;
 };
 
 const BOX = {
@@ -89,7 +98,7 @@ export function isBoxSeries(seriesName: ChartType): seriesName is BoxType {
 }
 
 export default class BoxSeries extends Component {
-  models: DrawModels = { series: [] };
+  models: DrawModels = { series: [], label: [] };
 
   drawModels!: DrawModels;
 
@@ -181,6 +190,13 @@ export default class BoxSeries extends Component {
     const { labels } = axes[this.valueAxis];
     const { tickDistance } = axes[this.labelAxis];
     const diverging = !!options.series?.diverging;
+    const labelOptions = Object.assign(
+      {
+        visible: false,
+        inside: false,
+      },
+      options.series?.label
+    );
     const { min, max } = getLimitOnAxis(labels, diverging);
 
     return {
@@ -190,6 +206,7 @@ export default class BoxSeries extends Component {
       diverging,
       ratio: this.getValueRatio(min, max, diverging),
       hasNegativeValue: hasNegative(labels),
+      labelOptions,
     };
   }
 
@@ -215,11 +232,13 @@ export default class BoxSeries extends Component {
 
     this.models.clipRect = [this.renderClipRectAreaModel()];
     this.models.series = seriesModels;
+    this.models.label = this.renderLabelModel(seriesModels, renderOptions);
 
     if (!this.drawModels) {
       this.drawModels = {
         clipRect: this.models.clipRect,
         series: deepCopyArray(seriesModels),
+        label: deepCopyArray(this.models.label),
       };
     }
 
@@ -273,13 +292,91 @@ export default class BoxSeries extends Component {
         return {
           type: 'rect',
           color,
+          label: this.getLabelValue(value),
           ...this.getAdjustedRect(dataStart, startPosition, barLength, columnWidth),
         };
       });
     });
   }
 
-  protected renderHighlightSeriesModel(seriesModel): RectModel[] {
+  renderLabelModel(seriesModel: RectModel[], renderOptions: RenderOptions): LabelModel[] {
+    if (!renderOptions.labelOptions.visible) {
+      return [];
+    }
+
+    return seriesModel.map((data) => {
+      const { label, width, height } = data;
+      let { x, y } = data;
+      let textAlign = 'center';
+      let textBaseline = 'middle';
+      const customX = 10;
+      const customY = 0;
+      const LABEL_FONT_STYLE = 'normal 11px Arial';
+      const font = renderOptions.font || LABEL_FONT_STYLE;
+      let style = { font };
+
+      // this.isBar && inside - START
+      if (this.isBar) {
+        y = data.y + height / 2;
+
+        x = data.x + width;
+        textAlign = 'end';
+
+        x = data.x + width / 2;
+        textAlign = 'center';
+
+        x = data.x;
+        textAlign = 'start';
+        //  this.isBar && inside - END
+
+        // this.isBar && outside - START
+        x = data.x + width + customX;
+        textAlign = 'left';
+        //  this.isBar && outside - END
+
+        // auto - START
+        if (this.plot.width + this.hoverThickness < x + getTextWidth(label!, font)) {
+          x = data.x + width - customX;
+          textAlign = 'end';
+        }
+        // auto - END
+
+        style = Object.assign(style, { textAlign, textBaseline: 'middle' });
+      } else {
+        x = data.x + width / 2;
+        textAlign = 'center';
+
+        // inside - START
+        y = data.y + customY;
+        textBaseline = 'top';
+        // inside - END
+
+        // outside - START
+        y = data.y - customY;
+        textBaseline = 'bottom';
+        // outside - END
+
+        // auto - START
+        if (this.plot.height + this.hoverThickness < height + getTextHeight(font)) {
+          y = data.y + customY;
+          textBaseline = 'top';
+        }
+        // auto - END
+
+        style = Object.assign(style, { textAlign: 'center', textBaseline });
+      }
+
+      return {
+        type: 'label',
+        text: label,
+        x,
+        y,
+        style: ['default', style],
+      } as LabelModel;
+    });
+  }
+
+  protected renderHighlightSeriesModel(seriesModel: RectModel[]): RectModel[] {
     return seriesModel.map((data) => {
       const { x, y, width, height, color } = data;
       const shadowOffset = this.hoverThickness / 2;
@@ -356,7 +453,7 @@ export default class BoxSeries extends Component {
     return this.getOffsetSize() / ((max - min) * multiple);
   }
 
-  private makeBarLength(value: BoxSeriesDataType, renderOptions: RenderOptions) {
+  makeBarLength(value: BoxSeriesDataType, renderOptions: RenderOptions) {
     if (isNull(value)) {
       return null;
     }
@@ -464,5 +561,15 @@ export default class BoxSeries extends Component {
     }
 
     return tickPos;
+  }
+
+  getLabelValue(value: BoxSeriesDataType) {
+    if (this.isRangeData) {
+      const [start, end] = value;
+
+      return String(end - start);
+    }
+
+    return String(value);
   }
 }

@@ -182,12 +182,26 @@ interface StackInfo {
 }
 
 type StackOptionType = boolean | StackInfo;
+type LabelOptionType = {
+  visible: boolean;
+  font?: string;
+  color?: string;
+  inside?: boolean;
+  total?:
+    | boolean
+    | {
+        visible: boolean;
+        font?: string;
+        color?: string;
+      };
+};
 
 interface BoxSeriesOptions extends BaseSeriesOptions {
   barWidth?: number;
   diverging?: boolean;
   colorByPoint?: boolean;
   stack?: StackOptionType;
+  label?: LabelOptionType;
 }
 
 export interface BarChartOptions extends BaseOptions {

@@ -1,3 +1,5 @@
+import { PieSeriesData } from '@t/options';
+
 export const randomData = (count: number) => {
   const categories = [...Array(count).keys()].map((numb) => String(numb));
   const series = [
@@ -1038,6 +1040,36 @@ export const lifeExpectancyPerGDPData = {
         { x: 23200, y: 78.49, r: 1993817, label: 'New Zealand' },
         { x: 30700, y: 80.26, r: 5991314, label: 'Australia' },
       ],
+    },
+  ],
+};
+
+export const browserUsageData = {
+  categories: ['Browser'],
+  series: [
+    {
+      name: 'Chrome',
+      data: 46.02,
+    },
+    {
+      name: 'IE',
+      data: 20.47,
+    },
+    {
+      name: 'Firefox',
+      data: 17.71,
+    },
+    {
+      name: 'Safari',
+      data: 5.45,
+    },
+    {
+      name: 'Opera',
+      data: 3.1,
+    },
+    {
+      name: 'Etc',
+      data: 7.25,
     },
   ],
 };

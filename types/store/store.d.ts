@@ -17,6 +17,7 @@ import {
   Align,
   AxisTitleOption,
   PlotLineValue,
+  PieSeriesType,
 } from '@t/options';
 import Store from '@src/store/store';
 import { AxisType } from '@src/component/axis';
@@ -29,6 +30,7 @@ type ChartSeriesMap = {
   column: BoxSeriesType<BoxSeriesDataType>[];
   area: AreaSeriesType[];
   bubble: BubbleSeriesType[];
+  pie: PieSeriesType[];
 };
 
 export type ChartType = keyof ChartSeriesMap;

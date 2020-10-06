@@ -8,7 +8,7 @@ type ObservableInfo = {
 };
 
 type Observer = {
-  (): any;
+  (): void;
   deps: Function[][];
 };
 
@@ -28,11 +28,15 @@ export function observe(fn: Function): Function {
       return;
     }
 
+    // If there is observer running or doing invisible work
     if (doingInvisibleWork || currentRunningObserverId !== null) {
+      // and current observer is in call cue, move it to last for call it once in current call chain.
       if (observerCallCue.includes(observer)) {
         observerCallCue.splice(observerCallCue.indexOf(observer), 1);
       }
+      // We use observer call cue because avoid nested observer call.
       observerCallCue.push(observer);
+      // or If there are no observers running. Run the observer and run the next observer in the call queue.
     } else if (currentRunningObserverId === null) {
       currentRunningObserverId = observeId;
       fn();
@@ -44,6 +48,7 @@ export function observe(fn: Function): Function {
 
   observer.deps = [];
 
+  // first observer excution for collect dependencies
   currentCollectorObserver = observer;
   currentCollectorObserver();
   currentCollectorObserver = null;
@@ -102,6 +107,7 @@ export function observable(
       configurable: true,
       enumerable: true,
       get: function () {
+        // It's some kind a trick to get observable information from closure using getter for notify()
         if (currentCollectorObserver === observableInfo) {
           return { target, key, value, obs };
         }
@@ -111,7 +117,7 @@ export function observable(
           currentCollectorObserver &&
           !obs.includes(currentCollectorObserver)
         ) {
-          // console.log('collect observer', key);
+          // if there is collector observer in running, collect current data as dependency
           obs.push(currentCollectorObserver);
           (currentCollectorObserver as Observer).deps.push(obs);
         }
@@ -129,7 +135,7 @@ export function observable(
         }
 
         if (prevValue !== value) {
-          // console.log('run observe', key, obs);
+          // Run observers
           invokeObs(obs);
         }
       },

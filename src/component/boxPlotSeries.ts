@@ -12,10 +12,11 @@ import {
   BoxPlotResponderTypes,
 } from '@t/components/series';
 import { getActiveSeriesMap } from '@src/helpers/legend';
-import { TooltipData } from '@t/components/tooltip';
+import { TooltipData, TooltipModel, TooltipTitleValues } from '@t/components/tooltip';
 import { getRGBA } from '@src/helpers/color';
 import { LineModel } from '@t/components/axis';
 import { BOX_SERIES_PADDING, BOX_HOVER_THICKNESS } from '@src/helpers/boxStyle';
+import { getTitleValueTpl, getSeriesNameTpl } from '@src/helpers/tooltip';
 
 type RenderOptions = {
   ratio: number;
@@ -33,6 +34,38 @@ const seriesOpacity = {
 };
 
 const MIN_BAR_WIDTH = 5;
+
+function getBoxPlotBodyTemplate({ data }: TooltipModel) {
+  const groupedData = data.reduce<TooltipData>((acc, item, index) => {
+    if (!index) {
+      acc = item;
+
+      return acc;
+    }
+
+    if (acc.category === item.category && acc.label === item.label) {
+      acc.value = [...acc.value, ...item.value] as TooltipTitleValues;
+    }
+
+    return acc;
+  }, {} as TooltipData);
+
+  return `<div class="tooltip-series-wrapper">
+  ${[groupedData]
+    .map(
+      ({ label, color, value: values }) =>
+        `<div class="tooltip-series">
+          ${getSeriesNameTpl(label, color)}
+        </div>
+        <div>
+      ${(values as TooltipTitleValues)
+        .map(({ title, formattedValue }) => getTitleValueTpl(title, formattedValue!))
+        .join('')}
+        </div>`
+    )
+    .join('')}
+</div>`;
+}
 
 export default class BoxPlotSeries extends Component {
   models: BoxPlotSeriesModels = { series: [] };
@@ -352,7 +385,7 @@ export default class BoxPlotSeries extends Component {
             { title: 'Minimum', value: minimum },
           ],
           category: categories[dataIndex],
-          templateType: 'boxPlot',
+          bodyTemplateFunc: getBoxPlotBodyTemplate,
         });
       });
 
@@ -364,7 +397,7 @@ export default class BoxPlotSeries extends Component {
           color: color!,
           value: [{ title: 'Outlier', value: dataValue }],
           category: categories[dataIndex],
-          templateType: 'boxPlot',
+          bodyTemplateFunc: getBoxPlotBodyTemplate,
         });
       });
     });

@@ -5,10 +5,11 @@ import { getActiveSeriesMap } from '@src/helpers/legend';
 import { getRGBA } from '@src/helpers/color';
 import { BulletChartOptions, BulletSeriesType, Size, RangeDataType } from '@t/options';
 import { isLabelAxisOnYAxis, getAxisName, getSizeKey } from '@src/helpers/axes';
-import { TooltipData, TooltipTemplateType } from '@t/components/tooltip';
+import { TooltipData, TooltipModel, TooltipTitleValues } from '@t/components/tooltip';
 import { BOX_SERIES_PADDING, BOX_HOVER_THICKNESS } from '@src/helpers/boxStyle';
 import { getDataLabelsOptions } from '@src/helpers/dataLabels';
 import { RectDataLabel } from '@t/components/dataLabels';
+import { getSeriesNameTpl, getTitleValueTpl } from '@src/helpers/tooltip';
 
 type RenderOptions = {
   ratio: number;
@@ -51,6 +52,22 @@ function getRectSize(vertical: boolean, barWidth: number, barLength: number): Si
 
 function getStartX(seriesIndex: number, tickDistance: number, barWidth: number) {
   return seriesIndex * tickDistance + (tickDistance - barWidth) / 2;
+}
+
+function getBulletBodyTemplate({ data }: TooltipModel) {
+  return `<div class="tooltip-series-wrapper">
+  ${data
+    .map(
+      ({ label, color, value: values }) =>
+        `<div class="tooltip-series">
+          ${getSeriesNameTpl(label, color)}
+        </div>
+        ${(values as TooltipTitleValues)
+          .map(({ title, formattedValue }) => getTitleValueTpl(title, formattedValue!))
+          .join('')}`
+    )
+    .join('')}
+</div>`;
 }
 
 export function isBulletSeries(seriesName: string) {
@@ -307,7 +324,7 @@ export default class BulletSeries extends Component {
         label: name,
         color: color!,
         value: [{ title: 'Range', value: range }],
-        templateType: 'bullet' as TooltipTemplateType,
+        bodyTemplateFunc: getBulletBodyTemplate,
       }));
 
       const bulletData = {
@@ -320,7 +337,7 @@ export default class BulletSeries extends Component {
         label: name,
         color: color!,
         value: [{ title: 'Marker', value: marker }],
-        templateType: 'bullet' as TooltipTemplateType,
+        bodyTemplateFunc: getBulletBodyTemplate,
       }));
 
       return [...acc, ...rangesData, bulletData, ...markersData];

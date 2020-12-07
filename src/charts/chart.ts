@@ -10,7 +10,7 @@ import EventEmitter, { CustomEventType, EventListener } from '@src/eventEmitter'
 import ComponentManager from '@src/component/componentManager';
 import Painter from '@src/painter';
 import Animator from '@src/animator';
-import { debounce, isBoolean, isNumber, isUndefined, pick, throttle } from '@src/helpers/utils';
+import { debounce, isBoolean, isNumber, isUndefined, pick } from '@src/helpers/utils';
 import { ChartProps, Point, AnimationOptions, SeriesDataInput, Size, DataInput } from '@t/options';
 
 import { responderDetectors } from '@src/responderDetectors';
@@ -154,17 +154,36 @@ export default abstract class Chart<T extends Options> {
   resizeChartSize() {
     this.animationControlFlag.resizing = true;
     const { offsetWidth, offsetHeight } = this.el as HTMLElement;
-    const { width, height } = this.store.state.chart;
+    const {
+      fitToContainerSize: { width: widthFlag, height: heightFlag },
+      chart: { width, height },
+    } = this.store.state;
 
-    if ((!offsetWidth && !offsetHeight) || (offsetWidth === width && offsetHeight === height)) {
+    if (
+      (!widthFlag && !heightFlag) ||
+      (!offsetWidth && !offsetHeight) ||
+      (offsetWidth === width && offsetHeight === height)
+    ) {
       this.animationControlFlag.resizing = false;
 
       return;
     }
+    /*
+    if (widthFlag ? offsetWidth : width) {
+      this.store.dispatch('setChartWidth', offsetWidth);
+    }
+
+    if (heightFlag) {
+      this.store.dispatch('setChartHeight', offsetHeight);
+    }
+    */
 
     this.eventBus.emit('resetHoveredSeries');
 
-    this.store.dispatch('setChartSize', { width: offsetWidth, height: offsetHeight });
+    this.store.dispatch('setChartSize', {
+      width: widthFlag ? offsetWidth : width,
+      height: heightFlag ? offsetHeight : height,
+    });
 
     this.draw();
   }
@@ -304,7 +323,34 @@ export default abstract class Chart<T extends Options> {
   };
 
   public setOptions = (options: Options) => {
-    this.store.dispatch('updateOptions', options);
+    const neededFitToWidth =
+      /*
+      !isUndefined(options.chart?.width) &&
+      this.store.initStoreState.options?.chart?.width !== options.chart?.width;
+    const neededFitToHeight =
+      !isUndefined(options.chart?.height) &&
+      this.store.initStoreState.options?.chart?.height !== options.chart?.height;
+
+    if (isNumber(options?.chart?.width) && isNumber(options?.chart?.height)) {
+      this.clearResizeEvent();
+    } else if (
+      isNumber(this.store.initStoreState.options?.chart?.width) &&
+      isNumber(this.store.initStoreState.options?.chart?.height) &&
+      (options.chart?.width === 'auto' || options.chart?.height === 'auto')
+    ) {
+      this.setResizeEvent();
+    }
+
+    if (neededFitToWidth) {
+      this.store.dispatch('setFitToContainerWidthFlag', options.chart?.width === 'auto');
+    }
+
+    if (neededFitToHeight) {
+      this.store.dispatch('setFitToContainerHeightFlag', options.chart?.height === 'auto');
+    }
+    */
+
+      this.store.dispatch('updateOptions', options);
   };
 
   public abstract addSeries(data: SeriesDataInput, dataInfo?: AddSeriesDataInfo): void;

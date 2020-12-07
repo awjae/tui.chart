@@ -279,6 +279,7 @@ export interface ChartState<T extends Options> {
   heatmapSeries: HeatmapSeriesData[];
   nestedPieSeries: Record<string, NestedPieSeriesDataType>;
   originalOptions: T;
+  fitToContainerSize: { width: boolean; height: boolean };
 }
 
 export type TreemapZoomId = {

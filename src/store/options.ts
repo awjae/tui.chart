@@ -38,11 +38,19 @@ const optionsData: StoreModule = {
       initStoreState.options = deepMergedCopy(initStoreState.options, options);
       state.originalOptions = deepMergedCopy(state.originalOptions, options);
 
+      /*
+      const width = state.fitToContainerSize.width
+        ? state.containerSize.width
+        : state.originalOptions.chart!.width!;
+      const height = state.fitToContainerSize.height
+        ? state.containerSize.height
+        : state.originalOptions.chart!.height!;
+      */
       const width = state.originalOptions.chart!.width!;
       const height = state.originalOptions.chart!.height!;
-
       state.options = getOptionsBySize({ width, height } as Size, state.originalOptions);
 
+      this.dispatch('setChartSize', { width, height });
       this.dispatch('initThemeState');
     },
   },

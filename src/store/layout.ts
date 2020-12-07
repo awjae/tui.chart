@@ -497,6 +497,7 @@ const layout: StoreModule = {
         height: chart.height - padding.Y * 2,
         width: chart.width - padding.X * 2,
       };
+
       const hasCenterYAxis = isCenterYAxis(options, !!series.bar);
       const hasAxis = !(series.pie || series.radar || series.treemap);
       const optionSize = getOptionSize(options);
@@ -507,7 +508,6 @@ const layout: StoreModule = {
       const yAxisTitleHeight = getYAxisTitleHeight(theme.yAxis) as number;
       const xAxisTitleHeight = theme.xAxis.title!.fontSize as number;
       const legendItemHeight = getLegendItemHeight(theme.legend.label!.fontSize!);
-
       // Don't change the order!
       // exportMenu -> resetButton -> title -> yAxis.title -> yAxis -> secondaryYAxisTitle -> secondaryYAxis -> xAxis -> xAxis.title -> legend -> circleLegend -> plot
       const exportMenu = getExportMenuRect(chartSize, isExportMenuVisible(options));
@@ -590,7 +590,7 @@ const layout: StoreModule = {
       const circleLegend = getCircleLegendRect(xAxis, yAxis, align, circleLegendState.width);
       const plot = getPlotRect(xAxis, yAxis, optionSize.plot);
 
-      extend(state.layout, {
+      state.layout = {
         title,
         plot,
         legend,
@@ -603,7 +603,7 @@ const layout: StoreModule = {
         resetButton,
         secondaryYAxisTitle,
         secondaryYAxis,
-      });
+      };
     },
   },
   observe: {

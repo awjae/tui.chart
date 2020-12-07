@@ -11,6 +11,11 @@ const root: StoreModule = {
       width: getInitailSize(options?.chart?.width),
       height: getInitailSize(options?.chart?.height),
     },
+    fitToContainerSize: {
+      width: options.chart?.width === 'auto',
+      height: options.chart?.height === 'auto',
+    },
+    containerSize: {},
   }),
   action: {
     setChartSize({ state }, size: Size) {
@@ -20,19 +25,39 @@ const root: StoreModule = {
     initChartSize({ state }, containerEl: HTMLElement) {
       if (state.chart.width === 0 || state.chart.height === 0) {
         if (containerEl.parentNode) {
-          this.dispatch('setChartSize', {
+          const size = {
             width: containerEl.offsetWidth,
             height: containerEl.offsetHeight,
-          });
+          };
+          this.dispatch('setChartSize', size);
+          this.dispatch('setContainerSize', size);
         } else {
           setTimeout(() => {
-            this.dispatch('setChartSize', {
+            const size = {
               width: containerEl.offsetWidth,
               height: containerEl.offsetHeight,
-            });
+            };
+            this.dispatch('setChartSize', size);
+            this.dispatch('setContainerSize', size);
           }, 0);
         }
       }
+    },
+    setContainerSize({ state }, size: Size) {
+      state.containerSize.width = size.width;
+      state.containerSize.height = size.height;
+    },
+    setChartHeight({ state }, height: number) {
+      state.chart.height = height;
+    },
+    setChartWidth({ state }, width: number) {
+      state.chart.width = width;
+    },
+    setFitToContainerWidthFlag({ state }, widthFlag: boolean) {
+      state.fitToContainerSize.width = widthFlag;
+    },
+    setFitToContainerHeightFlag({ state }, heightFlag: boolean) {
+      state.fitToContainerSize.height = heightFlag;
     },
   },
 };

@@ -7,6 +7,8 @@ import {
   StackDataValues,
   Stack,
   StackSeries,
+  RawSeries,
+  Series,
 } from '@t/store/store';
 import {
   BoxSeriesOptions,
@@ -17,7 +19,7 @@ import {
   BoxSeriesType,
 } from '@t/options';
 import { extend } from '@src/store/store';
-import { pickProperty, isObject, sum } from '@src/helpers/utils';
+import { pickProperty, isObject, sum, deepMergedCopy, deepCopy } from '@src/helpers/utils';
 
 type RawSeriesData = BoxSeriesType<BoxSeriesDataType>[];
 
@@ -176,37 +178,40 @@ function getScaleType(stackData: StackDataValues, stackType: StackType, divergin
   }
 }
 
+function initStackSeries(series: RawSeries | Series, options: Options) {
+  const stackSeries = {};
+
+  Object.keys(series).forEach((seriesName) => {
+    const chartType = seriesName as ChartType;
+    const stackOption = pickStackOption(options);
+
+    if (stackOption) {
+      if (!stackSeries[chartType]) {
+        stackSeries[chartType] = {};
+      }
+
+      stackSeries[chartType].stack = initializeStack(stackOption);
+    }
+  });
+
+  return stackSeries;
+}
+
 const stackSeriesData: StoreModule = {
   name: 'stackSeriesData',
-  state: ({ series, options }) => {
-    const stackSeries = {};
-
-    Object.keys(series).forEach((seriesName) => {
-      const chartType = seriesName as ChartType;
-      const stackOption = pickStackOption(options);
-
-      if (stackOption) {
-        if (!stackSeries[chartType]) {
-          stackSeries[chartType] = {};
-        }
-
-        stackSeries[chartType].stack = initializeStack(stackOption);
-      }
-    });
-
-    return {
-      stackSeries,
-    };
-  },
+  state: () => ({
+    stackSeries: {},
+  }),
   action: {
     setStackSeriesData({ state }) {
-      const { series, stackSeries, options } = state;
+      const { series, options } = state;
+      state.stackSeries = initStackSeries(series, options);
       const newStackSeries = {};
 
       Object.keys(series).forEach((seriesName) => {
         const seriesData = series[seriesName];
         const { data, seriesCount, seriesGroupCount } = seriesData;
-        const { stack } = stackSeries[seriesName] || {};
+        const { stack } = state.stackSeries[seriesName] || {};
         const diverging = !!(options.series as BoxSeriesOptions)?.diverging;
 
         if (stack) {

@@ -226,7 +226,6 @@ const legend: StoreModule = {
       const circleLegendVisible = series.bubble
         ? showCircleLegend(options as BubbleChartOptions)
         : false;
-
       extend(state.legend, {
         visible,
         align,

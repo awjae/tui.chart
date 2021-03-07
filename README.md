@@ -263,13 +263,19 @@ $ npm run test
 ### Develop
 
 Let's start development!
+<<<<<<< HEAD
 Run a server and see the code reflected.
 Add test cases and then make them green.
+=======
+You can develop UI through webpack-dev-server or storybook, and you can write tests through Jest.
+Don't miss adding test cases and then make green rights.
+>>>>>>> 32f3c2863730df8fd2a46242d48d72382398a292
 
 #### Run webpack-dev-server
 
 ```sh
 $ npm run serve
+<<<<<<< HEAD
 $ npm run serve:ie8 # Run on Internet Explorer 8
 ```
 
@@ -324,3 +330,61 @@ See the older versions of API page on the [releases page](https://github.com/nhn
 This software is licensed under the [MIT](https://github.com/nhn/tui.chart/blob/master/LICENSE) © [NHN](https://github.com/nhn).
 
 
+=======
+```
+
+#### Run storybook
+
+```sh
+$ npm run storybook
+```
+
+#### Run test
+
+```sh
+$ npm run test
+```
+
+### Pull Request
+
+Before PR, check to test lastly and then check any errors.
+If it has no error, commit and then push it!
+
+For more information on PR's step, please see links of Contributing section.
+
+## 💬 Contributing
+
+- [Code of Conduct](https://github.com/nhn/tui.chart/blob/main/CODE_OF_CONDUCT.md)
+- [Contributing guideline](https://github.com/nhn/tui.chart/blob/main/CONTRIBUTING.md)
+- [Issue guideline](https://github.com/nhn/tui.chart/tree/main/.github/ISSUE_TEMPLATE)
+- [Commit convention](https://github.com/nhn/tui.chart/blob/main/docs/COMMIT_MESSAGE_CONVENTION.md)
+
+## 🌏 Browser Support
+
+| <img src="https://user-images.githubusercontent.com/1215767/34348387-a2e64588-ea4d-11e7-8267-a43365103afe.png" alt="Chrome" width="16px" height="16px" /> Chrome | <img src="https://user-images.githubusercontent.com/1215767/34348590-250b3ca2-ea4f-11e7-9efb-da953359321f.png" alt="IE" width="16px" height="16px" /> Internet Explorer | <img src="https://user-images.githubusercontent.com/1215767/34348380-93e77ae8-ea4d-11e7-8696-9a989ddbbbf5.png" alt="Edge" width="16px" height="16px" /> Edge | <img src="https://user-images.githubusercontent.com/1215767/34348394-a981f892-ea4d-11e7-9156-d128d58386b9.png" alt="Safari" width="16px" height="16px" /> Safari | <img src="https://user-images.githubusercontent.com/1215767/34348383-9e7ed492-ea4d-11e7-910c-03b39d52f496.png" alt="Firefox" width="16px" height="16px" /> Firefox |
+| :--------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|                                                                               Yes                                                                                |                                                                                   10+                                                                                   |                                                                             Yes                                                                              |                                                                               Yes                                                                                |                                                                                Yes                                                                                 |
+
+## 🍞 TOAST UI Family
+
+- [TOAST UI Editor](https://github.com/nhn/tui.editor)
+- [TOAST UI Grid](https://github.com/nhn/tui.grid)
+- [TOAST UI Calendar](https://github.com/nhn/tui.calendar)
+- [TOAST UI Image-Editor](https://github.com/nhn/tui.image-editor)
+- [TOAST UI Components](https://github.com/nhn)
+
+## 🚀 Used By
+
+- [TOAST Cloud - Total Cloud Service](https://www.toast.com/service/)
+- [NHN - ToastCam](https://cam.toast.com/ko/#/)
+- [TOAST Dooray! - Collaboration Service (Project, Messenger, Mail, Calendar, Drive, Wiki, Contacts)](https://dooray.com)
+- [NHN - Smart Downloader](https://docs.toast.com/ko/Game/Smart%20Downloader/ko/console-guide/)
+- [NHN - Gamebase](https://docs.toast.com/ko/Game/Gamebase/ko/oper-analytics/)
+- [NHN Edu - iamTeacher](https://teacher.iamservice.net)
+- [HANGAME](https://www.hangame.com/)
+- [Payco](https://www.payco.com/)
+
+## 📜 License
+
+This software is licensed under the [MIT](https://github.com/nhn/tui.chart/blob/main/LICENSE) © [NHN](https://github.com/nhn).
+>>>>>>> 32f3c2863730df8fd2a46242d48d72382398a292

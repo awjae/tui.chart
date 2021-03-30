@@ -57,7 +57,7 @@ export default class TreemapSeries extends Component {
   render(chartState: ChartState<TreemapChartOptions>) {
     const { layout, treemapSeries, colorValueScale, options, theme, treemapZoomId } = chartState;
 
-    if (!treemapSeries.length) {
+    if (!treemapSeries) {
       throw new Error(message.noDataError(this.name));
     }
 
@@ -272,11 +272,9 @@ export default class TreemapSeries extends Component {
       throw new Error(message.SELECT_SERIES_API_INDEX_ERROR);
     }
 
-    this.eventBus.emit('renderSelectedSeries', {
-      models: [model],
-      name: this.name,
-    });
+    const models = this.getRespondersWithTheme([model], 'select');
 
+    this.eventBus.emit('renderSelectedSeries', { models, name: this.name });
     this.eventBus.emit('needDraw');
   };
 

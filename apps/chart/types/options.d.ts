@@ -21,7 +21,6 @@ import {
   ColumnLineChartThemeOptions,
   RadialBarChartThemeOptions,
 } from './theme';
-import { AxisType } from '../src/component/axis';
 
 export type RangeDataType<T> = [T, T];
 export type BoxSeriesDataType = number | RangeDataType<number> | null;
@@ -44,7 +43,7 @@ export type BubbleSeriesDataType = { label: string } & BubblePoint;
 
 export type LineTypeEventDetectType = 'near' | 'nearest' | 'grouped' | 'point';
 export type BoxTypeEventDetectType = 'grouped' | 'point';
-export type CicleTypeEventDetectType = 'grouped' | 'point';
+export type CircleTypeEventDetectType = 'grouped' | 'point';
 
 export type BezierPoint = {
   controlPoint?: {
@@ -197,7 +196,11 @@ export interface Scale {
   stepSize?: 'auto' | number;
 }
 
-type AxisLabelInfo = { axisName: AxisType; labels: string[]; index: number };
+type AxisLabelInfo = {
+  axisName: 'xAxis' | 'yAxis' | 'secondaryYAxis';
+  labels: string[];
+  index: number;
+};
 type AxisFormatter = (value: string, axisLabelInfo: AxisLabelInfo) => string;
 export type AxisTitleOption = Omit<TitleOption, 'align'>;
 type AxisTitle = string | AxisTitleOption;
@@ -294,8 +297,13 @@ interface BaseTooltipOptions {
   transition?: string | boolean;
 }
 
+interface LangOptions {
+  noData?: string;
+}
+
 export interface BaseOptions {
   chart?: BaseChartOptions;
+  lang?: LangOptions;
   series?: BaseSeriesOptions;
   xAxis?: BaseXAxisOptions;
   legend?: BaseLegendOptions;
@@ -319,9 +327,16 @@ type ResponsiveOptions = {
 
 interface BaseLegendOptions {
   align?: Align;
-  showCheckbox?: boolean;
   visible?: boolean;
   width?: number;
+}
+
+interface NormalLegendOptions extends BaseLegendOptions {
+  showCheckbox?: boolean;
+  item?: {
+    width?: number;
+    overflow?: 'ellipsis';
+  };
 }
 
 interface CircleLegendOptions {
@@ -367,6 +382,7 @@ export interface AreaChartOptions extends BaseOptions {
   xAxis?: LineTypeXAxisOptions;
   yAxis?: BothSidesYAxisOptions;
   plot?: LineTypePlotOptions;
+  legend?: NormalLegendOptions;
   theme?: AreaChartThemeOptions;
 }
 
@@ -375,18 +391,21 @@ export interface LineChartOptions extends BaseOptions {
   xAxis?: LineTypeXAxisOptions;
   yAxis?: BothSidesYAxisOptions;
   plot?: LineTypePlotOptions;
+  legend?: NormalLegendOptions;
   theme?: LineChartThemeOptions;
 }
 
 type LineScatterChartSeriesOptions = {
   line?: Pick<LineTypeSeriesOptions, 'spline' | 'showDot'>;
   dataLabels?: DataLabelOptions;
+  legend?: NormalLegendOptions;
 } & BaseSeriesOptions;
 
 export interface LineScatterChartOptions extends BaseOptions {
   series?: LineScatterChartSeriesOptions;
   yAxis?: BothSidesYAxisOptions;
   plot?: LineTypePlotOptions;
+  legend?: NormalLegendOptions;
   theme?: LineScatterChartThemeOptions;
 }
 
@@ -394,6 +413,7 @@ export interface LineAreaChartOptions extends BaseOptions {
   series?: LineAreaChartSeriesOptions;
   plot?: LineTypePlotOptions;
   yAxis?: BothSidesYAxisOptions;
+  legend?: NormalLegendOptions;
   theme?: LineAreaChartThemeOptions;
 }
 
@@ -412,6 +432,7 @@ export interface ScatterChartOptions extends BaseOptions {
   xAxis?: BaseXAxisOptions;
   yAxis?: BaseAxisOptions;
   plot?: PlotOptions;
+  legend?: NormalLegendOptions;
   theme?: ScatterChartThemeOptions;
 }
 
@@ -421,6 +442,7 @@ export interface BubbleChartOptions extends BaseOptions {
   yAxis?: BaseAxisOptions;
   circleLegend?: CircleLegendOptions;
   plot?: PlotOptions;
+  legend?: NormalLegendOptions;
   theme?: BubbleChartThemeOptions;
 }
 
@@ -454,6 +476,7 @@ export interface BarChartOptions extends BaseOptions {
   series?: BoxSeriesOptions;
   yAxis?: BarTypeYAxisOptions;
   plot?: PlotOptions;
+  legend?: NormalLegendOptions;
   theme?: BoxChartThemeOptions;
 }
 
@@ -461,6 +484,7 @@ export interface ColumnChartOptions extends BaseOptions {
   series?: BoxSeriesOptions & { shift?: boolean };
   yAxis?: BothSidesYAxisOptions;
   plot?: PlotOptions;
+  legend?: NormalLegendOptions;
   theme?: BoxChartThemeOptions;
 }
 
@@ -492,6 +516,7 @@ interface PieSeriesOptions extends BaseSeriesOptions {
 
 export interface PieChartOptions extends BaseOptions {
   series?: PieSeriesOptions;
+  legend?: NormalLegendOptions;
   theme?: PieChartThemeOptions;
 }
 
@@ -521,6 +546,7 @@ export interface RadarChartOptions extends BaseOptions {
   plot?: BaseSizeOptions & { type?: RadarPlotType };
   verticalAxis?: RadialValueAxisOptions;
   circularAxis?: RadialCategoryAxisOptions;
+  legend?: NormalLegendOptions;
   theme?: RadarChartThemeOptions;
 }
 
@@ -627,6 +653,7 @@ export interface ColumnLineChartOptions extends BaseOptions {
   series?: ColumnLineChartSeriesOptions;
   plot?: LineTypePlotOptions;
   yAxis?: BothSidesYAxisOptions;
+  legend?: NormalLegendOptions;
   theme?: ColumnLineChartThemeOptions;
 }
 
@@ -653,6 +680,7 @@ export type NestedPieSeriesOptions = Record<string, PieSeriesOptions> &
 
 export interface NestedPieChartOptions extends BaseOptions {
   series?: NestedPieSeriesOptions;
+  legend?: NormalLegendOptions;
   theme?: NestedPieChartThemeOptions;
 }
 
@@ -675,6 +703,7 @@ export interface RadialBarChartOptions extends BaseOptions {
   verticalAxis?: RadialCategoryAxisOptions;
   circularAxis?: RadialValueAxisOptions;
   series?: RadialBarSeriesOptions;
+  legend?: NormalLegendOptions;
   theme?: RadialBarChartThemeOptions;
 }
 
@@ -688,7 +717,7 @@ interface RadialBarSeriesOptions extends BaseSeriesOptions {
     start: number;
     end: number;
   };
-  eventDetectType?: CicleTypeEventDetectType;
+  eventDetectType?: CircleTypeEventDetectType;
   dataLabels?: DataLabelOptions;
 }
 

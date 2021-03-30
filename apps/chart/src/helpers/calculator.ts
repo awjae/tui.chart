@@ -1,7 +1,6 @@
-import { Options, ValueEdge, LabelAxisData } from '@t/store/store';
+import { ValueEdge, LabelAxisData } from '@t/store/store';
 import { range, isInteger, isString, isNumber, isNull } from '@src/helpers/utils';
 import { BezierPoint, Point } from '@t/options';
-import { formatDate, getDateFormat } from '@src/helpers/formatDate';
 import { DEFAULT_LABEL_TEXT } from '@src/brushes/label';
 import { TICK_SIZE } from '@src/brushes/axis';
 
@@ -91,15 +90,14 @@ export function divisors(value: number) {
   return result.sort((prev, next) => prev - next);
 }
 
-export function makeLabelsFromLimit(limit: ValueEdge, stepSize: number, options?: Options) {
+export function makeLabelsFromLimit(limit: ValueEdge, stepSize: number, isDateType?: boolean) {
   const multipleNum = findMultipleNum(stepSize);
   const min = Math.round(limit.min * multipleNum);
   const max = Math.round(limit.max * multipleNum);
   const labels = range(min, max + 1, stepSize * multipleNum);
-  const format = getDateFormat(options?.xAxis?.date);
 
   return labels.map((label) => {
-    return format ? formatDate(format, new Date(label)) : String(label / multipleNum);
+    return String(isDateType ? new Date(label) : label / multipleNum);
   });
 }
 
@@ -174,6 +172,10 @@ export function setSplineControlPoint(points: (BezierPoint | null)[]) {
 }
 
 export function getValueRatio(value: number, { min, max }: ValueEdge) {
+  if (max === min) {
+    return 0;
+  }
+
   return (value - min) / (max - min);
 }
 
@@ -188,21 +190,18 @@ export function getMaxLengthLabelWidth(labels: string[]) {
 }
 
 export function getXPosition(
-  axisData: Pick<LabelAxisData, 'pointOnColumn' | 'tickDistance' | 'labelDistance'>,
+  axisData: LabelAxisData,
   offsetSize: number,
   value: number | string | Date,
-  dataIndex: number,
-  xAxisLimit?: ValueEdge,
+  dataIndex: number
 ) {
-  const { pointOnColumn, tickDistance, labelDistance } = axisData;
+  const { pointOnColumn, tickDistance, labelRange } = axisData;
   let x;
 
-  if (xAxisLimit) {
+  if (labelRange) {
     const xValue = isString(value) ? Number(new Date(value)) : Number(value);
-    const xValueRatio = getValueRatio(xValue, xAxisLimit);
-    x =
-      xValueRatio * (offsetSize - (pointOnColumn ? labelDistance! : 0)) +
-      (pointOnColumn ? labelDistance! / 2 : 0);
+    const xValueRatio = getValueRatio(xValue, labelRange);
+    x = xValueRatio * offsetSize;
   } else {
     x = tickDistance * dataIndex + (pointOnColumn ? tickDistance / 2 : 0);
   }

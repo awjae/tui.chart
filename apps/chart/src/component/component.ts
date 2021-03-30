@@ -20,6 +20,7 @@ import {
   ScatterSeriesModels,
   BulletSeriesModels,
   BackgroundModel,
+  NoDataTextModel,
 } from '@t/components/series';
 import { AxisModels, LineModel, LabelModel } from '@t/components/axis';
 import { ExportMenuModels } from '@t/components/exportMenu';
@@ -55,7 +56,8 @@ export type ComponentType =
   | 'zeroAxis'
   | 'zoom'
   | 'backButton'
-  | 'background';
+  | 'background'
+  | 'noDataText';
 
 type ComponentModels =
   | AxisModels
@@ -86,7 +88,13 @@ type ComponentModels =
   | ScatterSeriesModels
   | BulletSeriesModels
   | BackgroundModel
-  | RadialAxisModels;
+  | RadialAxisModels
+  | NoDataTextModel;
+
+export type RespondersModel = {
+  component: Component;
+  detected: ResponderModel[];
+}[];
 
 export default abstract class Component {
   name = 'Component';
@@ -195,6 +203,8 @@ export default abstract class Component {
 
     if (Array.isArray(this.models)) {
       this.syncModels(this.drawModels, this.models);
+    } else if (!Object.keys(this.models).length) {
+      this.drawModels = this.models;
     } else {
       Object.keys(this.models).forEach((type) => {
         const currentModels = this.drawModels[type];
@@ -206,6 +216,10 @@ export default abstract class Component {
   }
 
   getCurrentModelToMatchTargetModel(models, currentModels, targetModels) {
+    if (!models || !currentModels) {
+      return [...targetModels];
+    }
+
     if (getFirstValidValue(targetModels)?.name) {
       const modelNames = [...new Set(models.map(({ name }) => name))];
       const targetNames = [...new Set(targetModels.map(({ name }) => name))];

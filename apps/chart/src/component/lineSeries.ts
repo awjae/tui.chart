@@ -25,30 +25,26 @@ import {
   getCoordinateDataIndex,
   getCoordinateXValue,
   getCoordinateYValue,
+  isCoordinateSeries,
 } from '@src/helpers/coordinate';
 import { getRGBA } from '@src/helpers/color';
-import { pick, includes, isNull } from '@src/helpers/utils';
+import { includes, isNull } from '@src/helpers/utils';
 import { getActiveSeriesMap } from '@src/helpers/legend';
 import {
   getNearestResponder,
   makeRectResponderModel,
+  makeRectResponderModelForCoordinateType,
   makeTooltipCircleMap,
+  RectResponderInfoForCoordinateType,
   RespondersThemeType,
 } from '@src/helpers/responders';
 import { getValueAxisName } from '@src/helpers/axes';
 import { getDataLabelsOptions } from '@src/helpers/dataLabels';
 import { PointDataLabel } from '@t/components/dataLabels';
 import { DotTheme, LineChartSeriesTheme } from '@t/theme';
-import { SelectSeriesInfo } from '@src/charts/chart';
+import { SelectSeriesInfo } from '@t/charts';
 import { message } from '@src/message';
 import { isAvailableSelectSeries, isAvailableShowTooltipInfo } from '@src/helpers/validation';
-
-interface RenderOptions {
-  pointOnColumn: boolean;
-  options: LineTypeSeriesOptions;
-  tickDistance: number;
-  labelDistance?: number;
-}
 
 type DatumType = CoordinateDataType | number | null;
 type ResponderTypes = CircleResponderModel[] | RectResponderModel[];
@@ -109,6 +105,7 @@ export default class LineSeries extends Component {
     }
 
     const categories = (chartState.categories as string[]) ?? [];
+    const rawCategories = (chartState.rawCategories as string[]) ?? [];
     const options = { ...chartState.options };
     if (options?.series && 'line' in options.series) {
       options.series = { ...options.series, ...options.series.line };
@@ -117,32 +114,27 @@ export default class LineSeries extends Component {
     this.setEventDetectType(series, options);
 
     const labelAxisData = axes.xAxis as LabelAxisData;
-    const { tickDistance, pointOnColumn, labelDistance } = labelAxisData;
-    const lineSeriesData = series.line.data;
+    const seriesOptions = (options.series ?? {}) as LineTypeSeriesOptions;
 
-    const renderLineOptions: RenderOptions = {
-      pointOnColumn,
-      options: (options.series || {}) as LineTypeSeriesOptions,
-      tickDistance,
-      labelDistance,
-    };
+    const lineSeriesData = series.line.data;
 
     this.theme = theme.series.line as Required<LineChartSeriesTheme>;
     this.rect = layout.plot;
     this.activeSeriesMap = getActiveSeriesMap(legend);
-    this.startIndex = viewRange ? viewRange[0] : 0;
+    this.startIndex = viewRange?.[0] ?? 0;
     this.selectable = this.getSelectableOption(options);
     this.yAxisName = getValueAxisName(options, this.name, 'yAxis');
 
     const lineSeriesModel = this.renderLinePointsModel(
       lineSeriesData,
       scale,
-      renderLineOptions,
+      labelAxisData,
+      seriesOptions,
       categories
     );
     const { dotSeriesModel, responderModel } = this.renderCircleModel(
       lineSeriesModel,
-      renderLineOptions
+      seriesOptions
     );
     const tooltipDataArr = this.makeTooltipData(lineSeriesData, categories);
     this.tooltipCircleMap = makeTooltipCircleMap(responderModel, tooltipDataArr);
@@ -164,37 +156,61 @@ export default class LineSeries extends Component {
       this.renderDataLabels(this.getDataLabels(lineSeriesModel));
     }
 
-    this.responders = this.getResponders(labelAxisData, responderModel, tooltipDataArr, categories);
+    const coordinateType = isCoordinateSeries(series);
+    this.responders = this.getResponders({
+      labelAxisData,
+      responderModel,
+      tooltipDataArr,
+      categories,
+      rawCategories,
+      coordinateType,
+    });
   }
 
-  private getResponders(
-    axisData: LabelAxisData,
-    seriesCircleModel: CircleModel[],
-    tooltipDataArr: TooltipData[],
-    categories: string[]
-  ): ResponderTypes {
-    let res: ResponderTypes;
-
+  private getResponders({
+    labelAxisData,
+    responderModel,
+    tooltipDataArr,
+    categories,
+    rawCategories,
+    coordinateType,
+  }: {
+    labelAxisData: LabelAxisData;
+    responderModel: CircleModel[];
+    tooltipDataArr: TooltipData[];
+    categories: string[];
+    rawCategories: string[];
+    coordinateType: boolean;
+  }): ResponderTypes {
     if (this.eventDetectType === 'near') {
-      res = this.makeNearTypeResponderModel(seriesCircleModel, tooltipDataArr);
-    } else if (this.eventDetectType === 'point') {
-      res = this.makeNearTypeResponderModel(seriesCircleModel, tooltipDataArr, 0);
-    } else {
-      res = makeRectResponderModel(this.rect, axisData, categories);
+      return this.makeNearTypeResponderModel(responderModel, tooltipDataArr, rawCategories);
+    }
+    if (this.eventDetectType === 'point') {
+      return this.makeNearTypeResponderModel(responderModel, tooltipDataArr, rawCategories, 0);
+    }
+    if (coordinateType) {
+      const rectResponderInfo = this.getRectResponderInfoForCoordinateType(
+        responderModel,
+        rawCategories
+      );
+
+      return makeRectResponderModelForCoordinateType(rectResponderInfo, this.rect);
     }
 
-    return res;
+    return makeRectResponderModel(this.rect, labelAxisData, categories);
   }
 
   makeNearTypeResponderModel(
     seriesCircleModel: CircleModel[],
     tooltipDataArr: TooltipData[],
+    categories: string[],
     detectionSize?: number
   ) {
     return seriesCircleModel.map((m, index) => ({
       ...m,
       data: tooltipDataArr[index],
       detectionSize,
+      label: categories[m.index!],
     }));
   }
 
@@ -229,12 +245,12 @@ export default class LineSeries extends Component {
   renderLinePointsModel(
     seriesRawData: LineSeriesType[],
     scale: Scale,
-    renderOptions: RenderOptions,
+    axisData: LabelAxisData,
+    options: LineTypeSeriesOptions,
     categories: string[]
   ): LinePointsModel[] {
-    const { spline } = renderOptions.options;
+    const { spline } = options;
     const yAxisLimit = scale[this.yAxisName].limit;
-    const xAxisLimit = scale?.xAxis?.limit;
     const { lineWidth, dashSegments } = this.theme;
 
     return seriesRawData.map(({ rawData, name, color: seriesColor }, seriesIndex) => {
@@ -249,13 +265,11 @@ export default class LineSeries extends Component {
         const value = getCoordinateYValue(datum);
         const yValueRatio = getValueRatio(value, yAxisLimit);
         const y = (1 - yValueRatio) * this.rect.height;
-
         const x = getXPosition(
-          pick(renderOptions, 'pointOnColumn', 'tickDistance', 'labelDistance') as LabelAxisData,
+          axisData,
           this.rect.width,
           getCoordinateXValue(datum as CoordinateDataType),
-          getCoordinateDataIndex(datum, categories, idx, this.startIndex),
-          xAxisLimit
+          getCoordinateDataIndex(datum, categories, idx, this.startIndex)
         );
         points.push({ x, y, value });
       });
@@ -276,9 +290,26 @@ export default class LineSeries extends Component {
     });
   }
 
+  getRectResponderInfoForCoordinateType(circleModel: CircleModel[], categories: string[]) {
+    const duplicateCheckMap = {};
+    const modelInRange = circleModel.filter(({ x }) => x >= 0 && x <= this.rect.width);
+
+    return modelInRange.reduce<RectResponderInfoForCoordinateType[]>((acc, model) => {
+      const { index, x } = model;
+      if (!duplicateCheckMap[x]) {
+        const label = categories[index!];
+
+        duplicateCheckMap[x] = true;
+        acc.push({ x, label });
+      }
+
+      return acc;
+    }, []);
+  }
+
   renderCircleModel(
     lineSeriesModel: LinePointsModel[],
-    { options }: RenderOptions
+    options: LineTypeSeriesOptions
   ): { dotSeriesModel: CircleModel[]; responderModel: CircleModel[] } {
     const dotSeriesModel = [] as CircleModel[];
     const responderModel = [] as CircleModel[];
@@ -454,8 +485,9 @@ export default class LineSeries extends Component {
     if (!model) {
       throw new Error(message.SELECT_SERIES_API_INDEX_ERROR);
     }
+    const models = this.getResponderSeriesWithTheme([model], 'select');
 
-    this.eventBus.emit('renderSelectedSeries', { models: [model], name: this.name });
+    this.eventBus.emit('renderSelectedSeries', { models, name: this.name });
     this.eventBus.emit('needDraw');
   };
 

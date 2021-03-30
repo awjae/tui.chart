@@ -1,6 +1,8 @@
 import { ValueEdge, ScaleData } from '@t/store/store';
 import { LineChartOptions, Scale } from '@t/options';
 import { isNumber } from '@src/helpers/utils';
+import { isDateType } from '@src/helpers/axes';
+import { AxisType } from '@src/component/axis';
 
 const SNAP_VALUES = [1, 2, 5, 10];
 const DEFAULT_PIXELS_PER_STEP = 88;
@@ -192,28 +194,31 @@ export function getStackScaleData(type: stackScaleType): ScaleData {
   return { limit: { min: 0, max: 100 }, stepSize: 25, stepCount: 5 };
 }
 
-export function calculateScaleForCoordinateLineType(
+export function calculateXAxisScaleForCoordinateLineType(
   scale: ScaleData,
   options: LineChartOptions,
-  categories?: string[]
+  categories: string[]
 ) {
-  if (!categories) {
-    return scale;
-  }
-
-  const dateType = !!options?.xAxis?.date;
+  const dateType = isDateType(options, AxisType.X);
   const values = categories.map((value) => (dateType ? Number(new Date(value)) : Number(value)));
   const { limit, stepSize } = scale;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const newLimit = { ...limit };
 
-  if (max - min) {
-    if (limit.min < min && limit.min + stepSize <= min) {
+  const distance = max - min;
+  let positionRatio = 0;
+  let sizeRatio = 1;
+
+  if (distance) {
+    if (limit.min < min) {
       newLimit.min += stepSize;
+      positionRatio = (newLimit.min - min) / distance;
+      sizeRatio -= positionRatio;
     }
-    if (limit.max > max && limit.max - stepSize >= max) {
+    if (limit.max > max) {
       newLimit.max -= stepSize;
+      sizeRatio -= (max - newLimit.max) / distance;
     }
   }
 
@@ -224,5 +229,7 @@ export function calculateScaleForCoordinateLineType(
     limit: newLimit,
     stepCount: newStepCount,
     stepSize,
+    positionRatio,
+    sizeRatio,
   };
 }

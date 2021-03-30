@@ -1,51 +1,51 @@
 import {
   Axes,
   AxisData,
+  Categories,
   CenterYAxisData,
+  ChartOptionsUsingYAxis,
+  ChartState,
+  InitAxisData,
+  LabelAxisData,
+  Layout,
   Options,
   ScaleData,
   Series,
   StoreModule,
-  ValueEdge,
-  ChartOptionsUsingYAxis,
-  ChartState,
-  LabelAxisData,
   ValueAxisData,
-  InitAxisData,
-  Layout,
-  Categories,
+  ValueEdge,
 } from '@t/store/store';
 import {
+  getAxisFormatter,
   getAxisName,
+  getAxisTheme,
+  getInitAxisIntervalData,
+  getLabelsAppliedFormatter,
+  getLabelXMargin,
+  getMaxLabelSize,
+  getRotatableOption,
   getSizeKey,
+  getViewAxisLabels,
+  getYAxisOption,
+  hasAxesLayoutChanged,
   hasBoxTypeSeries,
+  isDateType,
   isLabelAxisOnYAxis,
   isPointOnColumn,
-  getYAxisOption,
-  getAxisTheme,
-  getViewAxisLabels,
-  hasAxesLayoutChanged,
-  getRotatableOption,
-  makeFormattedCategory,
-  getMaxLabelSize,
-  makeTitleOption,
   makeRotationData,
-  getLabelXMargin,
-  getInitAxisIntervalData,
+  makeTitleOption,
 } from '@src/helpers/axes';
-import { makeLabelsFromLimit, getAxisLabelAnchorPoint } from '@src/helpers/calculator';
+import { getAxisLabelAnchorPoint, makeLabelsFromLimit } from '@src/helpers/calculator';
 import {
-  BaseAxisOptions,
   BarTypeYAxisOption,
+  BaseAxisOptions,
   BaseXAxisOptions,
-  LineTypeXAxisOptions,
   BoxSeriesOptions,
-  RangeDataType,
-  Rect,
   LineTypeSeriesOptions,
+  LineTypeXAxisOptions,
+  Rect,
 } from '@t/options';
 import { deepMergedCopy, hasNegativeOnly, isNumber, pickProperty } from '@src/helpers/utils';
-import { isZooming } from '@src/helpers/range';
 import { isCoordinateSeries } from '@src/helpers/coordinate';
 import { AxisTheme } from '@t/theme';
 import { AxisType } from '@src/component/axis';
@@ -58,7 +58,6 @@ interface StateProp {
   series: Series;
   theme: Required<AxisTheme>;
   centerYAxis?: Pick<CenterYAxisData, 'xAxisHalfSize'> | null;
-  zoomRange?: RangeDataType<number>;
   initialAxisData: InitAxisData;
   labelOnYAxis?: boolean;
   axisName: string;
@@ -66,7 +65,6 @@ interface StateProp {
 
 type ValueStateProp = StateProp & {
   categories: string[];
-  rawCategories: string[];
   isCoordinateTypeChart: boolean;
 };
 
@@ -121,15 +119,6 @@ function getZeroPosition(
   return labelAxisOnYAxis ? position : axisSize - position;
 }
 
-function getAxisFormatter(options: Options, axisName: string) {
-  const axisOptions = {
-    ...getYAxisOption(options),
-    xAxis: options.xAxis,
-  };
-
-  return axisOptions[axisName]?.label?.formatter ?? ((value) => value);
-}
-
 export function getLabelAxisData(stateProp: ValueStateProp): LabelAxisState {
   const {
     axisSize,
@@ -138,34 +127,41 @@ export function getLabelAxisData(stateProp: ValueStateProp): LabelAxisState {
     options,
     theme,
     scale,
-    zoomRange,
-    rawCategories,
     initialAxisData,
     isCoordinateTypeChart,
     axisName,
   } = stateProp;
   const pointOnColumn = isPointOnColumn(series, options);
-  const labelsBeforeFormatting =
-    !isZooming(rawCategories, zoomRange) && isCoordinateTypeChart
-      ? makeLabelsFromLimit(scale.limit, scale.stepSize, options)
-      : makeFormattedCategory(categories, options?.xAxis?.date);
+  const dateType = isDateType(options, axisName);
+  const labelsBeforeFormatting = isCoordinateTypeChart
+    ? makeLabelsFromLimit(scale.limit, scale.stepSize, dateType)
+    : categories;
+  const labels = getLabelsAppliedFormatter(labelsBeforeFormatting, options, dateType, axisName);
+  let labelRange;
 
-  const formatter = getAxisFormatter(options, axisName);
-  // @TODO: regenerate label when exceeding max width
-  const labels = labelsBeforeFormatting.map((label, index) =>
-    formatter(label, { index, labels: labelsBeforeFormatting, axisName })
-  );
+  if (scale) {
+    const baseLabels = pointOnColumn ? labelsBeforeFormatting : categories;
+    const values = baseLabels.map((value) => (dateType ? Number(new Date(value)) : Number(value)));
 
-  const tickIntervalCount = categories.length - (pointOnColumn ? 0 : 1);
+    labelRange = { min: Math.min(...values), max: Math.max(...values) };
+  }
+
+  const rectResponderCount = categories.length;
+  const tickIntervalCount = rectResponderCount - (pointOnColumn ? 0 : 1);
   const tickDistance = tickIntervalCount ? axisSize / tickIntervalCount : axisSize;
   const labelDistance = axisSize / (labels.length - (pointOnColumn ? 0 : 1));
-  const tickCount = labels.length + (pointOnColumn ? 1 : 0);
+  let tickCount = labels.length;
+  if (pointOnColumn && !isCoordinateTypeChart) {
+    tickCount += 1;
+  }
+
   const viewLabels = getViewAxisLabels(
     {
       labels,
       pointOnColumn,
       tickDistance,
       tickCount,
+      scale,
       ...initialAxisData,
     },
     axisSize
@@ -179,6 +175,8 @@ export function getLabelAxisData(stateProp: ValueStateProp): LabelAxisState {
     labelDistance,
     tickDistance,
     tickCount,
+    labelRange,
+    rectResponderCount,
     isLabelAxis: true,
     ...initialAxisData,
     ...getMaxLabelSize(labels, axisLabelMargin, getTitleFontString(theme.label)),
@@ -300,20 +298,17 @@ function getSecondaryYAxisData({
   initialAxisData,
   isCoordinateTypeChart,
 }: SecondaryYAxisParam): LabelAxisState | ValueAxisState {
-  const { scale, options, series, zoomRange, theme } = state;
+  const { scale, options, series, theme } = state;
   const categories = state.categories as string[];
-  const rawCategories = state.rawCategories as string[];
 
   return labelOnYAxis
     ? getLabelAxisData({
         scale: scale.secondaryYAxis!,
         axisSize: labelAxisSize,
         categories: getYAxisOption(options).secondaryYAxis?.categories ?? categories,
-        rawCategories,
         options,
         series,
         theme: getAxisTheme(theme, AxisType.SECONDARY_Y),
-        zoomRange,
         initialAxisData,
         isCoordinateTypeChart,
         axisName: AxisType.SECONDARY_Y,
@@ -386,15 +381,12 @@ const axes: StoreModule = {
   },
   action: {
     setAxesData({ state, initStoreState }) {
-      const { scale, options, series, layout, zoomRange, theme } = state;
+      const { scale, options, series, layout, theme } = state;
       const { xAxis, yAxis, plot } = layout;
 
       const isCoordinateTypeChart = isCoordinateSeries(initStoreState.series);
       const labelOnYAxis = isLabelAxisOnYAxis(series, options);
-      const { categories, rawCategories } = getCategoriesWithTypes(
-        state.categories,
-        state.rawCategories
-      );
+      const { categories } = getCategoriesWithTypes(state.categories, state.rawCategories);
       const { valueAxisName, valueAxisSize, labelAxisName, labelAxisSize } = getAxisInfo(
         labelOnYAxis,
         plot,
@@ -430,11 +422,9 @@ const axes: StoreModule = {
         scale: scale[labelAxisName],
         axisSize: labelAxisSize,
         categories,
-        rawCategories,
         options,
         series,
         theme: getAxisTheme(theme, labelAxisName),
-        zoomRange,
         initialAxisData: initialAxisData[labelAxisName],
         isCoordinateTypeChart,
         labelOnYAxis,

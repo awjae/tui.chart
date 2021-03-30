@@ -7,8 +7,9 @@ import {
   RotationLabelData,
   InitAxisData,
   Layout,
+  ScaleData,
 } from '@t/store/store';
-import { LineTypeXAxisOptions, BulletChartOptions, AxisTitle, DateOption } from '@t/options';
+import { LineTypeXAxisOptions, BulletChartOptions, AxisTitle } from '@t/options';
 import { Theme } from '@t/theme';
 import { AxisType } from '@src/component/axis';
 import {
@@ -279,6 +280,7 @@ type ViewAxisLabelParam = {
   labels: string[];
   pointOnColumn?: boolean;
   labelDistance?: number;
+  scale?: ScaleData;
   labelInterval: number;
   tickDistance: number;
   tickInterval: number;
@@ -294,10 +296,24 @@ export function getViewAxisLabels(axisData: ViewAxisLabelParam, axisSize: number
     labelInterval,
     tickInterval,
     tickCount,
+    scale,
   } = axisData;
-  const relativePositions = makeTickPixelPositions(axisSize, tickCount);
-  const interval = labelInterval === tickInterval ? labelInterval : 1;
-  const labelAdjustment = pointOnColumn ? (labelDistance ?? tickDistance * interval) / 2 : 0;
+
+  let axisSizeAppliedRatio = axisSize;
+  let additional = 0;
+  let labelAdjustment = 0;
+
+  if (scale) {
+    const sizeRatio = scale?.sizeRatio ?? 1;
+    const positionRatio = scale?.positionRatio ?? 0;
+    axisSizeAppliedRatio = axisSize * sizeRatio;
+    additional = axisSize * positionRatio;
+  } else {
+    const interval = labelInterval === tickInterval ? labelInterval : 1;
+    labelAdjustment = pointOnColumn ? (labelDistance ?? tickDistance * interval) / 2 : 0;
+  }
+
+  const relativePositions = makeTickPixelPositions(axisSizeAppliedRatio, tickCount, additional);
 
   return labels.reduce<ViewAxisLabel[]>((acc, text, index) => {
     const offsetPos = relativePositions[index] + labelAdjustment;
@@ -317,10 +333,29 @@ export function makeTitleOption(title?: AxisTitle) {
   return isString(title) ? { ...defaultOption, text: title } : { ...defaultOption, ...title };
 }
 
-export function makeFormattedCategory(categories: string[], date?: DateOption) {
-  const format = getDateFormat(date);
+export function getAxisFormatter(options: Options, axisName: string) {
+  const axisOptions = {
+    ...getYAxisOption(options),
+    xAxis: options.xAxis,
+  };
 
-  return categories.map((category) => (format ? formatDate(format, new Date(category)) : category));
+  return axisOptions[axisName]?.label?.formatter ?? ((value) => value);
+}
+
+export function getLabelsAppliedFormatter(
+  labels: string[],
+  options: Options,
+  dateType: boolean,
+  axisName: string
+) {
+  const dateFormatter = getDateFormat(options?.[axisName]?.date);
+  const formattedLabels =
+    dateType && dateFormatter
+      ? labels.map((label) => formatDate(dateFormatter, new Date(label)))
+      : labels;
+  const formatter = getAxisFormatter(options, axisName);
+
+  return formattedLabels.map((label, index) => formatter(label, { index, labels, axisName }));
 }
 
 export function makeRotationData(
@@ -398,4 +433,8 @@ function getInitTickInterval(categories?: string[], layout?: Layout) {
   const count = categories.length;
 
   return getAutoAdjustingInterval(count, width, categories);
+}
+
+export function isDateType(options: Options, axisName: string) {
+  return !!options[axisName]?.date;
 }

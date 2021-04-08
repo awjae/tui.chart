@@ -210,41 +210,64 @@ Add the container element where TOAST UI Chart will be created.
 #### Load
 The TOAST UI Chart can be used by creating an instance with the constructor function. To access the constructor function, import the module using one of the three following methods depending on your environment.
 
-```javascript
-var chart = tui.chart; /* namespace */
-```
-```javascript
-var chart = require('tui-chart'); /* CommonJS in Node.js */
-```
-```javascript
-import chart from 'tui-chart'; /* ES6 in Node.js */
-```
+| [Area](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-area.md)                                                                         | [Line](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-line.md)                                                                        | [Bar](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-bar.md)                                                                         | [Column](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-column.md)                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="https://user-images.githubusercontent.com/35371660/104139606-15ec5b80-53f0-11eb-96f6-c5bc593d9603.png"  width="300" alt='area chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104139669-65328c00-53f0-11eb-9612-c457a0cdaf9f.png" width="300" alt='line chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104140066-d2dfb780-53f2-11eb-8bba-355cb22bc35c.png" width="300" alt='bar chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104139953-1259d400-53f2-11eb-8d48-2a48d4cfe6b2.png"  width="300" alt='column chart'/> |
 
-Factory function needs three parameters: container, data, options
+| [Bullet](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-bullet.md)                                                                      | [BoxPlot](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-boxplot.md)                                                                     | [Treemap](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-treemap.md)                                                                     | [Heatmap](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-heatmap.md)                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="https://user-images.githubusercontent.com/35371660/104140183-76c96300-53f3-11eb-88c7-49c212d9e31b.png" width="300" alt='bullet chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104140209-a6786b00-53f3-11eb-8ff0-ade619a89ff4.png" width="300" alt='boxplot chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104140267-fd7e4000-53f3-11eb-878a-4eb24b4b83de.png" width="300" alt='treemap chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104140300-243c7680-53f4-11eb-9c92-465355e34211.png" width="300" alt='heatmap chart'/> |
 
-* container: Wrapper HTML element that will contain the chart as a child
-* data: Numerical data the chart will be based on
-* options: functional options including legend, alignment, and tooltip visibilities
+| [Scatter](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-scatter.md)                                                                     | [Bubble](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-bubble.md)                                                                      | [Radar](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-radar.md)                                                                       | [Pie](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-pie.md)                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="https://user-images.githubusercontent.com/35371660/104156462-6c778b00-542c-11eb-9101-a9df4e48d8db.png" width="300" alt='scatter chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104156347-3508de80-542c-11eb-805e-fca276bc6c5f.png" width="300" alt='bubble chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104140534-176c5280-53f5-11eb-830e-574b05fbf4db.png" width="300" alt='radar chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104140544-2eab4000-53f5-11eb-87c3-d2bc9790fa5b.png" width="300" alt='pie chart'/> |
 
-``` javascript
-var container = document.getElementById('chart-area');
-var data = {
-    category: [...], series: [...]
-};
-var options = {
-    chart: {width: 700, height: 400}
-};
+| [LineArea](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-lineArea.md)                                                                    | [LineScatter](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-lineScatter.md)                                                                 | [ColumnLine](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-columnLine.md)                                                                  | [NestedPie](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-nestedPie.md)                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="https://user-images.githubusercontent.com/35371660/104140692-fc4e1280-53f5-11eb-8ae7-05568ed6f333.png" width="300" alt='lineArea chart'/>| <img src="https://user-images.githubusercontent.com/35371660/104156268-160a4c80-542c-11eb-9893-9adb052727da.png" width="300" alt='lineScatter chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104140778-72527980-53f6-11eb-83ab-ad0883d8593b.png" width="300" alt='columnLine chart'/> | <img src="https://user-images.githubusercontent.com/35371660/104140795-8eeeb180-53f6-11eb-833e-ae1cdb9d8879.png" width="300" alt='nestedPie chart'/> |
 
-chart.barChart(container, data, options);
-```
+| [RadialBar](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-radialBar.md)                                                                    | [Gauge](https://github.com/nhn/tui.chart/blob/main/docs/en/chart-gauge.md)                                                                     |                                                                      |                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <img width="300" src="https://user-images.githubusercontent.com/43128697/108300194-3ffd1e80-71e3-11eb-988c-f0a56933a4f5.png" alt="radialBar chart"> | <img width="300" alt="gauge chart" src="https://user-images.githubusercontent.com/43128697/110775762-a33e1600-82a2-11eb-82cc-594bf41e9638.png"> | <img width="300" src="https://user-images.githubusercontent.com/43128697/108300188-3ecbf180-71e3-11eb-902c-3814079380cc.png" alt="coming soon"> | <img width="300" src="https://user-images.githubusercontent.com/43128697/108300188-3ecbf180-71e3-11eb-902c-3814079380cc.png" alt="next"> |
 
-Refer to [details](https://nhn.github.io/tui.chart/latest) for additional informations.
+- Stack Options(Explained in [each chart guide](https://github.com/nhn/tui.chart/tree/main/docs))
+- Diverging Options(Explained in [each chart guide](https://github.com/nhn/tui.chart/tree/main/docs))
+- Change Event Detect Type(Explained in [each chart guide](https://github.com/nhn/tui.chart/tree/main/docs))
+- [Custom Theme](https://github.com/nhn/tui.chart/tree/main/docs/en/common-theme.md)
+- [Custom Tooltip](https://github.com/nhn/tui.chart/blob/main/docs/en/common-tooltip.md)
+- [Export `xls`, `csv`, `png`, `jpeg` file](https://github.com/nhn/tui.chart/blob/main/docs/en/common-exportMenu.md)
+- [Live Update](https://github.com/nhn/tui.chart/blob/main/docs/en/common-liveUpdate-options.md)
+- [Responsive Layout](https://github.com/nhn/tui.chart/blob/main/docs/en/common-responsive-options.md)
 
-## 🔧 Development
+In addition, a variety of powerful features can be found on the demo page below. 👇👇👇
 
-The TOAST UI products are open-source.
-After fixing issues, create a pull request(PR).
-Run npm scripts and develop with the following process.
+## 🐾 Examples
+
+- [Line Chart](http://nhn.github.io/tui.chart/latest/tutorial-example08-01-line-chart-basic)
+- [Area Chart](http://nhn.github.io/tui.chart/latest/tutorial-example01-01-area-chart-basic)
+- [LineArea Chart](http://nhn.github.io/tui.chart/latest/tutorial-example14-01-LineArea-chart-basic)
+- [Bar Chart](http://nhn.github.io/tui.chart/latest/tutorial-example02-01-bar-chart-basic)
+- [Column Chart](http://nhn.github.io/tui.chart/latest/tutorial-example06-01-column-chart-basic)
+- [ColumnLine Chart](http://nhn.github.io/tui.chart/latest/tutorial-example13-01-columnLine-chart-basic)
+- [Bullet Chart](http://nhn.github.io/tui.chart/latest/tutorial-example05-01-bullet-chart-baic)
+- [BoxPlot Chart](http://nhn.github.io/tui.chart/latest/tutorial-example03-01-boxPlot-chart-basic)
+- [Treemap Chart](http://nhn.github.io/tui.chart/latest/tutorial-example12-01-treemap-chart-basic)
+- [Heatmap Chart](http://nhn.github.io/tui.chart/latest/tutorial-example07-01-heatmap-chart-basic)
+- [Scatter Chart](http://nhn.github.io/tui.chart/latest/tutorial-example11-01-scatter-chart-basic)
+- [LineScatter Chart](http://nhn.github.io/tui.chart/latest/tutorial-example15-01-LineScatter-chart-basic)
+- [Bubble Chart](http://nhn.github.io/tui.chart/latest/tutorial-example04-01-bubble-chart-basic)
+- [Pie Chart](http://nhn.github.io/tui.chart/latest/tutorial-example09-01-pie-chart-basic)
+- [NestedPie Chart](http://nhn.github.io/tui.chart/latest/tutorial-example16-01-NestedPie-chart-basic)
+- [Radar Chart](http://nhn.github.io/tui.chart/latest/tutorial-example10-01-radar-chart-basic)
+- [RadialBar Chart](http://nhn.github.io/tui.chart/latest/tutorial-example18-01-radialBar-chart-basic)
+- [Gauge Chart](http://nhn.github.io/tui.chart/latest/tutorial-example20-01-gauge-chart-basic)
+
+Here are more [examples](http://nhn.github.io/tui.chart/latest/tutorial-example01-01-area-chart-basic) and play with TOAST UI Chart!
+
+## 🔧 Pull Request Steps
+
+TOAST UI products are open source, so you can create a pull request(PR) after you fix issues.
+Run npm scripts and develop yourself with the following process.
 
 ### Setup
 
